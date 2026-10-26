@@ -9,6 +9,7 @@ NUMMER="$(echo "$VERSION" | awk -F. '{ printf "%d%02d%02d", $1, $2, $3 }')"
 rm -rf build && mkdir -p build
 swift scripts/symbol.swift build/AppIcon.iconset ressourcen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
 iconutil -c icns build/AppIcon.iconset -o ressourcen/AppIcon.icns
+sips -g hasAlpha -g pixelWidth ressourcen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
 
 command -v xcodegen >/dev/null || brew install xcodegen
 xcodegen generate --spec project.yml --quiet
@@ -35,5 +36,8 @@ APP=build/ipa/Payload/Paketbote.app
 codesign -f -s - --entitlements ressourcen/Widgets-iOS.entitlements "$APP/PlugIns/PaketboteWidgets.appex"
 codesign -f -s - --entitlements ressourcen/iOS.entitlements "$APP"
 echo "iPhone: Berechtigungen"; codesign -d --entitlements - build/ipa/Payload/Paketbote.app 2>/dev/null | grep -A2 application-groups || echo "  (keine)"
+echo "iPhone: Symbol im Info.plist"; plutil -p "$APP/Info.plist" | grep -A6 CFBundleIcons || { echo "FEHLER: kein App-Symbol"; exit 1; }
+ls "$APP" | grep -i appicon
+mkdir -p bilder-ci && cp ressourcen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png bilder-ci/
 (cd build/ipa && zip -qry "../Paketbote-iOS-$VERSION.ipa" Payload)
 echo "Fertig: build/Paketbote-macOS-$VERSION.zip, build/Paketbote-iOS-$VERSION.ipa"

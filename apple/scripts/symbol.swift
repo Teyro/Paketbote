@@ -1,6 +1,7 @@
 // App-Symbol zeichnen: weißer Karton auf blauem Verlauf, dazu ein gelber Haken-Kreis (angekommen).
 // Aufruf: swift scripts/symbol.swift <Ordner.iconset> <AppIcon-1024.png>
 import AppKit
+import ImageIO
 
 let ordner = CommandLine.arguments[1]
 let gross = CommandLine.arguments[2]
@@ -8,8 +9,8 @@ try? FileManager.default.createDirectory(atPath: ordner, withIntermediateDirecto
 
 /// rand: macOS-Symbole haben Luft drumherum, iOS-Symbole füllen die Fläche (iOS rundet selbst ab)
 func bild(_ px: Int, mac: Bool) -> Data {
-    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8, samplesPerPixel: mac ? 4 : 3,
-                               hasAlpha: mac, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: px, pixelsHigh: px, bitsPerSample: 8, samplesPerPixel: 4,
+                               hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
     let s = CGFloat(px)
@@ -52,4 +53,13 @@ for (groesse, faktor) in [(16, 1), (16, 2), (32, 1), (32, 2), (128, 1), (128, 2)
     let name = faktor == 1 ? "icon_\(groesse)x\(groesse).png" : "icon_\(groesse)x\(groesse)@2x.png"
     try! bild(groesse * faktor, mac: true).write(to: URL(fileURLWithPath: "\(ordner)/\(name)"))
 }
-try! bild(1024, mac: false).write(to: URL(fileURLWithPath: gross))
+// iOS will ein Symbol ohne Transparenz: auf eine Fläche ohne Alphakanal übertragen
+// (direkt in ein RGB-Bild ohne Alpha zu zeichnen geht nicht – AppKit bekommt dafür keine Zeichenfläche, das Bild bliebe schwarz)
+let rgba = NSBitmapImageRep(data: bild(1024, mac: false))!.cgImage!
+let ctx = CGContext(data: nil, width: 1024, height: 1024, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                    bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+ctx.draw(rgba, in: CGRect(x: 0, y: 0, width: 1024, height: 1024))
+let ohneAlpha = ctx.makeImage()!
+let ziel = CGImageDestinationCreateWithURL(URL(fileURLWithPath: gross) as CFURL, "public.png" as CFString, 1, nil)!
+CGImageDestinationAddImage(ziel, ohneAlpha, nil)
+precondition(CGImageDestinationFinalize(ziel), "Symbol konnte nicht geschrieben werden")
