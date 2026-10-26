@@ -9,12 +9,12 @@ public struct DirektListe: Codable, Equatable, Sendable {
 
     public init() {}
 
-    static var ordner: URL {
+    public static var ordner: URL {
         let o = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Paketbote", isDirectory: true)
         try? FileManager.default.createDirectory(at: o, withIntermediateDirectories: true)
         return o
     }
-    static var datei: URL { ordner.appendingPathComponent("direkt.json") }
+    public static var datei: URL { ordner.appendingPathComponent("direkt.json") }
 
     public static func laden(aus datei: URL = DirektListe.datei) -> DirektListe {
         let dec = JSONDecoder()
