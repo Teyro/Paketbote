@@ -1,4 +1,4 @@
-// Verteilt i18n/en.json: Apple (ressourcen/i18n/en.json, <de|en>.lproj/Localizable.strings) und Linux (linux/gemeinsam/en.json)
+// Verteilt i18n/en.json: Apple (ressourcen/i18n/en.json, <de|en>.lproj/Localizable.strings) und Linux (linux/gemeinsam/uebersetzung.js)
 // Aufruf: node werkzeuge/baue-uebersetzungen.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,8 +13,9 @@ for (const [lproj, tab] of [['de', Object.fromEntries(Object.keys(en).map((k) =>
   fs.mkdirSync(o, { recursive: true });
   fs.writeFileSync(path.join(o, 'Localizable.strings'), strings(tab));
 }
-for (const ziel of ['apple/ressourcen/i18n', 'linux/gemeinsam']) {
-  fs.mkdirSync(path.join(wurzel, ziel), { recursive: true });
-  fs.copyFileSync(path.join(wurzel, 'i18n/en.json'), path.join(wurzel, ziel, 'en.json'));
-}
+fs.mkdirSync(path.join(wurzel, 'apple/ressourcen/i18n'), { recursive: true });
+fs.copyFileSync(path.join(wurzel, 'i18n/en.json'), path.join(wurzel, 'apple/ressourcen/i18n/en.json'));
+// Linux (QML): als JavaScript-Bibliothek
+fs.mkdirSync(path.join(wurzel, 'linux/gemeinsam'), { recursive: true });
+fs.writeFileSync(path.join(wurzel, 'linux/gemeinsam/uebersetzung.js'), '.pragma library\n// erzeugt von werkzeuge/baue-uebersetzungen.mjs – nicht von Hand ändern\nvar EN = ' + JSON.stringify(en, null, 1) + ';\n');
 console.log('Übersetzungen gebaut: en');
