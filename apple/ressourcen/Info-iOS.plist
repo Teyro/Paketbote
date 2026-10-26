@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key><string>de</string>
+	<key>CFBundleLocalizations</key><array><string>de</string><string>en</string></array>
+	<key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleName</key><string>Paketbote</string>
+	<key>CFBundleDisplayName</key><string>Paketbote</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key><true/>
+	<key>UILaunchScreen</key><dict/>
+	<key>UIApplicationSupportsIndirectInputEvents</key><true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array><string>UIInterfaceOrientationPortrait</string></array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
+	<!-- Hintergrundabruf: neue Stände melden, Widgets auffrischen -->
+	<key>UIBackgroundModes</key><array><string>fetch</string></array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key><array><string>de.teyro.paketbote.aktualisieren</string></array>
+	<!-- Widgets und Mitteilungen öffnen eine Sendung: paketbote://sendung/<id> -->
+	<key>CFBundleURLTypes</key>
+	<array><dict>
+		<key>CFBundleURLName</key><string>de.teyro.paketbote</string>
+		<key>CFBundleURLSchemes</key><array><string>paketbote</string></array>
+	</dict></array>
+	<!-- Home Assistant läuft im Heimnetz oft ohne HTTPS -->
+	<key>NSAppTransportSecurity</key>
+	<dict><key>NSAllowsArbitraryLoads</key><true/><key>NSAllowsLocalNetworking</key><true/></dict>
+	<key>NSLocalNetworkUsageDescription</key><string>Paketbote verbindet sich mit Home Assistant in deinem Heimnetz.</string>
+</dict>
+</plist>

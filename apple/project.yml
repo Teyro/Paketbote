@@ -1,0 +1,140 @@
+# Xcode-Projekt für iPhone-/iPad-App, Mac-App und ihre Widgets. Erzeugen: xcodegen generate
+name: Paketbote
+options:
+  bundleIdPrefix: de.teyro
+  deploymentTarget:
+    iOS: "17.0"
+    macOS: "14.0"
+  createIntermediateGroups: true
+packages:
+  PaketKern:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Ohne Apple-Entwicklerkonto: ad hoc signieren (iPhone: Signulous signiert danach neu)
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    AD_HOC_CODE_SIGNING_ALLOWED: YES
+    ENABLE_HARDENED_RUNTIME: NO
+    DEAD_CODE_STRIPPING: YES
+    ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+targets:
+  Paketbote-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/App
+      - path: Sources/AppIOS
+      - path: Sources/Widgets
+      - path: ressourcen/Assets.xcassets
+      - path: ressourcen/i18n
+        type: folder
+        buildPhase: resources
+      - path: ressourcen/sprachen
+        buildPhase: resources
+    dependencies:
+      - package: PaketKern
+      - target: PaketboteWidgets-iOS
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_NAME: Paketbote
+        PRODUCT_BUNDLE_IDENTIFIER: de.teyro.paketbote
+        INFOPLIST_FILE: ressourcen/Info-iOS.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: ressourcen/iOS.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+  PaketboteWidgets-iOS:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/WidgetErweiterung
+      - path: Sources/Widgets
+      - path: ressourcen/i18n
+        type: folder
+        buildPhase: resources
+      - path: ressourcen/sprachen
+        buildPhase: resources
+    dependencies:
+      - package: PaketKern
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_NAME: PaketboteWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: de.teyro.paketbote.widgets
+        INFOPLIST_FILE: ressourcen/Widgets-iOS.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: ressourcen/Widgets-iOS.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+  Paketbote-Mac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/App
+      - path: Sources/AppMac
+      - path: Sources/Widgets
+      - path: ressourcen/AppIcon.icns
+        buildPhase: resources
+      - path: ressourcen/Assets.xcassets
+      - path: ressourcen/i18n
+        type: folder
+        buildPhase: resources
+      - path: ressourcen/sprachen
+        buildPhase: resources
+    dependencies:
+      - package: PaketKern
+      - target: PaketboteWidgets-Mac
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_NAME: Paketbote
+        PRODUCT_BUNDLE_IDENTIFIER: de.teyro.paketbote
+        INFOPLIST_FILE: ressourcen/Info-Mac.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ARCHS: "arm64 x86_64"
+        ONLY_ACTIVE_ARCH: NO
+  PaketboteWidgets-Mac:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Sources/WidgetErweiterung
+      - path: Sources/Widgets
+      - path: ressourcen/i18n
+        type: folder
+        buildPhase: resources
+      - path: ressourcen/sprachen
+        buildPhase: resources
+    dependencies:
+      - package: PaketKern
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_NAME: PaketboteWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: de.teyro.paketbote.widgets
+        INFOPLIST_FILE: ressourcen/Widgets-Mac.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: ressourcen/Widgets-Mac.entitlements
+        ARCHS: "arm64 x86_64"
+        ONLY_ACTIVE_ARCH: NO
+        SKIP_INSTALL: YES
+schemes:
+  Paketbote-iOS:
+    build:
+      targets:
+        Paketbote-iOS: all
+        PaketboteWidgets-iOS: all
+  Paketbote-Mac:
+    build:
+      targets:
+        Paketbote-Mac: all
+        PaketboteWidgets-Mac: all

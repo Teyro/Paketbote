@@ -1,0 +1,8 @@
+apple/build/
+apple/.build/
+apple/*.xcodeproj
+apple/ressourcen/AppIcon.icns
+apple/ressourcen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png
+bilder-ci/
+node_modules/
+.DS_Store
