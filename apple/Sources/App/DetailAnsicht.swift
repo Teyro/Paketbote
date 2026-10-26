@@ -1,7 +1,13 @@
 import SwiftUI
 import MapKit
 import CoreLocation
+import PhotosUI
 import PaketKern
+#if canImport(UIKit)
+import UIKit
+#else
+import AppKit
+#endif
 
 /// Eine Sendung: Kopf mit Logo und Stand, Karte der Stationen, Verlauf, Aktionen
 struct DetailAnsicht: View {
@@ -9,6 +15,10 @@ struct DetailAnsicht: View {
     let sendung: Sendung
     @State private var umbenennen = false
     @State private var neuerName = ""
+    @State private var notiz = ""
+    @State private var fotoWahl: PhotosPickerItem?
+    @State private var foto: Image?
+    @State private var fragt = false
 
     var body: some View {
         ScrollView {
@@ -21,6 +31,7 @@ struct DetailAnsicht: View {
                 }
                 knoepfe
                 verlauf
+                notizUndFoto
                 angaben
             }
             .padding()
@@ -28,6 +39,20 @@ struct DetailAnsicht: View {
             .frame(maxWidth: .infinity)
         }
         .navigationTitle(sendung.titel)
+        .task(id: sendung.id) {
+            notiz = kern.notiz(sendung.id)
+            fotoLaden()
+            fragt = true
+            await kern.jetztAbfragen(sendung)
+            fragt = false
+        }
+        .onChange(of: fotoWahl) { _, neu in
+            Task {
+                guard let d = try? await neu?.loadTransferable(type: Data.self) else { return }
+                try? FotoAblage.speichern(d, sendung.id)
+                fotoLaden()
+            }
+        }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
@@ -54,6 +79,10 @@ struct DetailAnsicht: View {
         HStack(alignment: .top, spacing: 14) {
             DienstLogo(dienst: sendung.dienst, groesse: 64)
             VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    if sendung.ruecksendung { Etikett(text: T("Rücksendung"), farbe: .purple) }
+                    if fragt { ProgressView().controlSize(.small) }
+                }
                 Text(sendung.titel).font(.title2.weight(.bold)).lineLimit(2)
                 if !sendung.name.isEmpty && !sendung.absender.isEmpty && sendung.name != sendung.absender {
                     Text(sendung.absender).font(.subheadline).foregroundStyle(.secondary)
@@ -115,8 +144,13 @@ struct DetailAnsicht: View {
             Text(T("Verlauf")).font(.headline).padding(.bottom, 8)
             if sendung.ereignisse.isEmpty {
                 Text(sendung.verfolgenURL == nil ? T("Noch keine Stationen bekannt.")
-                     : T("Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder in Home Assistant einen 17TRACK- bzw. DHL-Schlüssel eintragen."))
+                     : T("Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder unter Einstellungen → Direkt verfolgen einen Anbieter eintragen."))
                     .font(.callout).foregroundStyle(.secondary)
+                if !kern.anbieterFehler.isEmpty && !fragt {
+                    ForEach(kern.anbieterFehler.sorted(by: { $0.key < $1.key }), id: \.key) { e in
+                        Label("\(e.key): \(e.value)", systemImage: "exclamationmark.circle").font(.caption).foregroundStyle(.secondary)
+                    }
+                }
             }
             ForEach(Array(sendung.ereignisse.enumerated()), id: \.element.id) { i, e in
                 HStack(alignment: .top, spacing: 12) {
@@ -144,9 +178,39 @@ struct DetailAnsicht: View {
         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
+    /// Notiz und Foto (bleiben auf diesem Gerät)
+    private var notizUndFoto: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(T("Notiz und Foto")).font(.headline)
+            TextField(T("z. B. „Beim Nachbarn abgegeben“"), text: $notiz, axis: .vertical)
+                .lineLimit(1...5)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit { kern.notizSetzen(sendung.id, notiz) }
+                .onChange(of: notiz) { _, t in kern.notizSetzen(sendung.id, t) }
+            HStack {
+                PhotosPicker(selection: $fotoWahl, matching: .images) {
+                    Label(foto == nil ? T("Foto hinzufügen") : T("Foto ersetzen"), systemImage: "photo")
+                }
+                if foto != nil {
+                    Button(role: .destructive) { FotoAblage.loeschen(sendung.id); foto = nil } label: { Label(T("Foto entfernen"), systemImage: "trash") }
+                }
+            }
+            .buttonStyle(.bordered)
+            if let foto {
+                foto.resizable().scaledToFit().frame(maxHeight: 260).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+    }
+
+    private func fotoLaden() {
+        foto = FotoAblage.bild(sendung.id)
+    }
+
     private var angaben: some View {
         VStack(alignment: .leading, spacing: 6) {
             zeile(T("Dienst"), sendung.dienstName)
+            zeile(T("Quelle"), sendung.quelle == "direkt" ? T("direkt verfolgt") + (sendung.anbieter.isEmpty ? "" : " · " + sendung.anbieter)
+                              : T("Home Assistant") + (sendung.anbieter.isEmpty ? "" : " · " + sendung.anbieter))
             if !sendung.nummer.isEmpty { zeile(T("Sendungsnummer"), sendung.nummer) }
             if !sendung.kundenkonto.isEmpty { zeile(T("Kundenkonto"), sendung.kundenkonto) }
             if kern.mehrereKonten && !sendung.kontoName.isEmpty { zeile(T("Postfach"), sendung.kontoName) }
@@ -215,4 +279,27 @@ enum Orte {
         d.set([k.latitude, k.longitude], forKey: "ort." + ort)
         return k
     }
+}
+
+/// Fotos zu Sendungen (JPEG auf dem Gerät)
+enum FotoAblage {
+    static func speichern(_ daten: Data, _ id: String) throws {
+        #if canImport(UIKit)
+        let jpeg = UIImage(data: daten).flatMap { $0.jpegData(compressionQuality: 0.8) } ?? daten
+        #else
+        let jpeg = NSBitmapImageRep(data: daten)?.representation(using: .jpeg, properties: [.compressionFactor: 0.8]) ?? daten
+        #endif
+        try jpeg.write(to: DirektListe.foto(id), options: .atomic)
+    }
+
+    static func bild(_ id: String) -> Image? {
+        guard let d = try? Data(contentsOf: DirektListe.foto(id)) else { return nil }
+        #if canImport(UIKit)
+        return UIImage(data: d).map { Image(uiImage: $0) }
+        #else
+        return NSImage(data: d).map { Image(nsImage: $0) }
+        #endif
+    }
+
+    static func loeschen(_ id: String) { try? FileManager.default.removeItem(at: DirektListe.foto(id)) }
 }

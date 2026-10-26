@@ -34,10 +34,21 @@ mkdir -p build/ipa/Payload
 cp -R build/dd/Build/Products/Release-iphoneos/Paketbote.app build/ipa/Payload/
 APP=build/ipa/Payload/Paketbote.app
 codesign -f -s - --entitlements ressourcen/Widgets-iOS.entitlements "$APP/PlugIns/PaketboteWidgets.appex"
+codesign -f -s - "$APP/PlugIns/PaketboteTeilen.appex"
 codesign -f -s - --entitlements ressourcen/iOS.entitlements "$APP"
 echo "iPhone: Berechtigungen"; codesign -d --entitlements - build/ipa/Payload/Paketbote.app 2>/dev/null | grep -A2 application-groups || echo "  (keine)"
 echo "iPhone: Symbol im Info.plist"; plutil -p "$APP/Info.plist" | grep -A6 CFBundleIcons || { echo "FEHLER: kein App-Symbol"; exit 1; }
 ls "$APP" | grep -i appicon
 mkdir -p bilder-ci && cp ressourcen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png bilder-ci/
 (cd build/ipa && zip -qry "../Paketbote-iOS-$VERSION.ipa" Payload)
-echo "Fertig: build/Paketbote-macOS-$VERSION.zip, build/Paketbote-iOS-$VERSION.ipa"
+
+# Zweite IPA mit Apple-Watch-App (eigene Datei – falls das Neu-Signieren mit der Uhr Probleme macht, bleibt die erste)
+bauen Paketbote-Uhr "-sdk watchos -destination generic/platform=watchOS" uhr "CODE_SIGNING_ALLOWED=NO"
+rm -rf build/ipa-uhr && mkdir -p build/ipa-uhr/Payload
+cp -R "$APP" build/ipa-uhr/Payload/
+mkdir -p build/ipa-uhr/Payload/Paketbote.app/Watch
+cp -R "build/dd/Build/Products/Release-watchos/Paketbote Uhr.app" build/ipa-uhr/Payload/Paketbote.app/Watch/
+codesign -f -s - "build/ipa-uhr/Payload/Paketbote.app/Watch/Paketbote Uhr.app"
+codesign -f -s - --entitlements ressourcen/iOS.entitlements build/ipa-uhr/Payload/Paketbote.app
+(cd build/ipa-uhr && zip -qry "../Paketbote-iOS-mit-Uhr-$VERSION.ipa" Payload)
+echo "Fertig: build/Paketbote-macOS-$VERSION.zip, build/Paketbote-iOS-$VERSION.ipa, build/Paketbote-iOS-mit-Uhr-$VERSION.ipa"

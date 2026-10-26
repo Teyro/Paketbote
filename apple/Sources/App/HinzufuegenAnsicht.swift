@@ -1,15 +1,16 @@
 import SwiftUI
 import PaketKern
 
-/// Sendung von Hand verfolgen: Nummer (auch aus der Zwischenablage), Dienst (meist erkannt), Name
+/// Sendung verfolgen: Nummer (eintippen, einfügen, scannen), Dienst (meist erkannt), Name, Rücksendung
 struct HinzufuegenAnsicht: View {
     let kern: Kern
-    var vorgabe = ""
     @Environment(\.dismiss) private var schliessen
     @State private var nummer = ""
     @State private var dienst = ""
     @State private var name = ""
+    @State private var ruecksendung = false
     @State private var laeuft = false
+    @State private var scannen = false
     @FocusState private var fokus: Bool
 
     private var erkannt: String { Dienst.vonNummer(nummer) }
@@ -28,11 +29,18 @@ struct HinzufuegenAnsicht: View {
                             .textInputAutocapitalization(.characters)
                             #endif
                             .onSubmit(senden)
-                        if let n = Zwischenablage.text.flatMap(Dienst.nummerIn), n != nummer {
-                            Button { nummer = n } label: { Label(T("Einfügen"), systemImage: "doc.on.clipboard") }
-                                .labelStyle(.iconOnly)
-                                .help(T("Nummer aus der Zwischenablage"))
+                        // Einfügen ohne Nachfrage des Systems
+                        PasteButton(payloadType: String.self) { texte in
+                            if let n = texte.lazy.compactMap({ Dienst.nummerIn($0) }).first { nummer = n }
                         }
+                        .labelStyle(.iconOnly)
+                        .buttonBorderShape(.capsule)
+                        #if os(iOS)
+                        if Scanner.moeglich {
+                            Button { scannen = true } label: { Label(T("Paketschein scannen"), systemImage: "barcode.viewfinder") }
+                                .labelStyle(.iconOnly)
+                        }
+                        #endif
                     }
                     Picker(T("Paketdienst"), selection: $dienst) {
                         Text(erkannt.isEmpty ? T("Bitte wählen") : T("Automatisch (%1)", Dienst.name(erkannt))).tag("")
@@ -43,18 +51,26 @@ struct HinzufuegenAnsicht: View {
                 } footer: {
                     if !nummer.isEmpty && gewaehlt.isEmpty {
                         Text(T("Die Nummer passt zu mehreren Diensten – bitte den Paketdienst wählen."))
+                    } else if !gewaehlt.isEmpty {
+                        let quellen = kern.verfolgung.moeglich(gewaehlt)
+                        Text(quellen.isEmpty ? T("Für %1 ist noch kein Anbieter eingerichtet (Einstellungen → Direkt verfolgen).", Dienst.name(gewaehlt))
+                             : T("Abfrage über %1.", quellen.joined(separator: " → ")))
                     }
                 }
                 Section {
                     TextField(T("Name, z. B. „Neue Schuhe“ (optional)"), text: $name).onSubmit(senden)
+                    Toggle(T("Rücksendung"), isOn: $ruecksendung)
                 } footer: {
-                    Text(T("Home Assistant verfolgt die Sendung ab jetzt mit – Mails zur selben Nummer ergänzen sie."))
+                    Text(kern.einstellungen.eingerichtet && kern.einstellungen.auchInHA
+                         ? T("Paketbote fragt selbst bei den Anbietern nach und trägt die Sendung auch in Home Assistant ein.")
+                         : T("Paketbote fragt selbst bei den Anbietern nach – auch ohne Home Assistant."))
                 }
             }
             .formStyle(.grouped)
             .navigationTitle(T("Sendung hinzufügen"))
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $scannen) { ScannerBlatt { nummer = $0 } }
             #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(T("Abbrechen")) { schliessen() } }
@@ -63,12 +79,13 @@ struct HinzufuegenAnsicht: View {
                 }
             }
             .onAppear {
-                if nummer.isEmpty { nummer = vorgabe }
-                fokus = true
+                if nummer.isEmpty { nummer = kern.hinzufuegenNummer }
+                kern.hinzufuegenNummer = ""
+                fokus = nummer.isEmpty
             }
         }
         #if os(macOS)
-        .frame(minWidth: 440, minHeight: 300)
+        .frame(minWidth: 460, minHeight: 360)
         #endif
     }
 
@@ -77,9 +94,12 @@ struct HinzufuegenAnsicht: View {
         laeuft = true
         Task {
             let ok = await kern.hinzufuegen(nummer: nummer.trimmingCharacters(in: .whitespaces), dienst: gewaehlt,
-                                            name: name.trimmingCharacters(in: .whitespaces))
+                                            name: name.trimmingCharacters(in: .whitespaces), ruecksendung: ruecksendung)
             laeuft = false
-            if ok { schliessen() }
+            if ok {
+                schliessen()
+                if let s = kern.sendung(kern.auswahl) { await kern.jetztAbfragen(s) }
+            }
         }
     }
 }

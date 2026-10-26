@@ -5,7 +5,7 @@ import PackageDescription
 // Apps und Widgets baut das Xcode-Projekt (project.yml, erzeugt mit XcodeGen).
 let package = Package(
     name: "Paketbote",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v17), .macOS(.v14), .watchOS(.v10)],
     products: [.library(name: "PaketKern", targets: ["PaketKern"])],
     targets: [
         .target(name: "PaketKern"),

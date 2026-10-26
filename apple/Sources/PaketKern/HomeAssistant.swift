@@ -1,4 +1,7 @@
 import Foundation
+#if os(iOS)
+import UIKit
+#endif
 
 /// Fehler beim Gespräch mit Home Assistant – mit Text für die Anzeige
 public struct HAFehler: Error, Equatable, Sendable {
@@ -92,10 +95,12 @@ public enum Ablage {
         #if os(iOS)
         if let g = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: gruppe) { return g }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        #else
+        #elseif os(macOS)
         // in der Sandbox der Widgets zeigt das Benutzerverzeichnis in den Container – dort den echten Pfad nehmen
         let echt = URL(fileURLWithPath: "/Users/\(NSUserName())/Library/Application Support/Paketbote", isDirectory: true)
         return echt
+        #else
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         #endif
     }
 
@@ -113,18 +118,32 @@ public enum Ablage {
 
     static var datei: URL { ordner.appendingPathComponent("sendungen.json") }
 
+    /// Ersatzweg ohne App-Gruppe (z. B. nach dem Neu-Signieren mit Signulous): eine benannte Zwischenablage,
+    /// die nur Apps desselben Teams lesen können. Darin liegt nur der Stand der Sendungen – kein Token.
+    public static let ablageName = "de.teyro.paketbote.stand"
+
     public static func lesen() -> Uebersicht? {
-        guard let d = try? Data(contentsOf: datei) else { return nil }
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .secondsSince1970
-        return try? dec.decode(Uebersicht.self, from: d)
+        if let d = try? Data(contentsOf: datei), let u = try? dec.decode(Uebersicht.self, from: d) { return u }
+        #if os(iOS)
+        if !gruppeDa, let p = UIPasteboard(name: UIPasteboard.Name(ablageName), create: false),
+           let d = p.data(forPasteboardType: "public.json"), let u = try? dec.decode(Uebersicht.self, from: d) { return u }
+        #endif
+        return nil
     }
 
     public static func schreiben(_ u: Uebersicht) {
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .secondsSince1970
+        guard let d = try? enc.encode(u) else { return }
         try? FileManager.default.createDirectory(at: ordner, withIntermediateDirectories: true)
-        try? enc.encode(u).write(to: datei, options: .atomic)
+        try? d.write(to: datei, options: .atomic)
+        #if os(iOS)
+        if !gruppeDa, let p = UIPasteboard(name: UIPasteboard.Name(ablageName), create: true) {
+            p.setData(d, forPasteboardType: "public.json")
+        }
+        #endif
     }
 
     /// Zugang für Widgets und Kurzbefehle auf dem iPhone (in der App-Gruppe; auf dem Mac im Schlüsselbund der App)

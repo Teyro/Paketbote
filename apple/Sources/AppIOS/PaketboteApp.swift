@@ -20,7 +20,7 @@ struct PaketboteApp: App {
             .safeAreaInset(edge: .top) { UpdateBand() }
         }
         .onChange(of: phase) { _, neu in
-            if neu == .active { Task { await kern.laden(still: true) } }
+            if neu == .active { Task { await kern.laden(still: true); await LiveAktivitaeten.abgleichen(kern, darfStarten: true) } }
             if neu == .background { Hintergrund.planen() }
         }
         .backgroundTask(.appRefresh(Hintergrund.kennung)) {
@@ -33,7 +33,10 @@ struct PaketboteApp: App {
         guard url.scheme == "paketbote" else { return }
         switch url.host {
         case "sendung": kern.auswahl = url.lastPathComponent
-        case "neu": kern.hinzufuegenOffen = true
+        case "neu":
+            // aus dem Teilen-Menü: paketbote://neu?nummer=…
+            kern.hinzufuegenNummer = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "nummer" }?.value ?? ""
+            kern.hinzufuegenOffen = true
         default: break
         }
     }
@@ -59,6 +62,13 @@ enum Hintergrund {
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        MainActor.assumeIsolated {
+            Uhr.shared.starten()
+            Kern.shared.nachLaden = { kern in
+                Uhr.shared.senden(kern)
+                Task { await LiveAktivitaeten.abgleichen(kern, darfStarten: UIApplication.shared.applicationState == .active) }
+            }
+        }
         return true
     }
 

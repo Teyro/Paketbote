@@ -1,5 +1,6 @@
 import WidgetKit
 import SwiftUI
+import AppIntents
 import PaketKern
 
 /// Widgets von Paketbote für Home-Bildschirm, Sperrbildschirm (iPhone) und Schreibtisch (Mac).
@@ -8,7 +9,23 @@ struct PaketboteWidgets: WidgetBundle {
     init() { Sprache.laden() }
     var body: some Widget {
         PaketeWidget()
+        #if os(iOS)
+        PaketAktivitaetWidget()
+        #endif
     }
+}
+
+/// Einstellungen des Widgets (lange drücken → „Widget bearbeiten“): eigener Zugang zu Home Assistant.
+/// Nötig, wenn die App ihn nicht teilen kann (keine App-Gruppe nach dem Neu-Signieren, z. B. mit Signulous).
+struct WidgetZugang: WidgetConfigurationIntent {
+    static let title: LocalizedStringResource = "Paketbote"
+    static let description = IntentDescription("Home Assistant für dieses Widget – nur nötig, wenn das Widget sonst nichts zeigt.")
+
+    @Parameter(title: "Home-Assistant-Adresse") var adresse: String?
+    @Parameter(title: "Zugriffstoken") var token: String?
+    @Parameter(title: "Postfach (leer = alle)") var konto: String?
+
+    init() {}
 }
 
 struct Eintrag: TimelineEntry {
@@ -16,7 +33,7 @@ struct Eintrag: TimelineEntry {
     let daten: WidgetDaten
 }
 
-struct Anbieter: TimelineProvider {
+struct Zeitleiste: AppIntentTimelineProvider {
     private func gespeichert() -> Eintrag {
         let u = Ablage.lesen()
         return Eintrag(date: Date(), daten: WidgetDaten(uebersicht: u, eingerichtet: u != nil || Ablage.zugang.eingerichtet))
@@ -29,29 +46,30 @@ struct Anbieter: TimelineProvider {
         ]), eingerichtet: true))
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (Eintrag) -> Void) { completion(gespeichert()) }
+    func snapshot(for configuration: WidgetZugang, in context: Context) async -> Eintrag { gespeichert() }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Eintrag>) -> Void) {
-        Task {
-            var e = gespeichert()
-            #if os(iOS)
-            // Auf dem iPhone holt das Widget selbst (die App läuft ja meist nicht)
-            let ha = Ablage.zugang
-            if ha.eingerichtet, let u = try? await ha.laden() {
-                Ablage.schreiben(u)
-                e = Eintrag(date: Date(), daten: WidgetDaten(uebersicht: u, eingerichtet: true))
-            }
-            #endif
-            // um Mitternacht neu (für „kommt heute“), sonst alle 30 Minuten
-            let mitternacht = Calendar.current.startOfDay(for: Date().addingTimeInterval(86400))
-            completion(Timeline(entries: [e], policy: .after(min(Date().addingTimeInterval(1800), mitternacht))))
+    func timeline(for configuration: WidgetZugang, in context: Context) async -> Timeline<Eintrag> {
+        var e = gespeichert()
+        // Zugang: aus der App (App-Gruppe) oder aus den Einstellungen des Widgets
+        var ha = Ablage.zugang
+        if !ha.eingerichtet, let a = configuration.adresse, let t = configuration.token, !a.isEmpty, !t.isEmpty {
+            ha = HomeAssistant(adresse: a, token: t, konto: configuration.konto ?? "")
         }
+        if ha.eingerichtet, var u = try? await ha.laden() {
+            // direkt verfolgte Sendungen aus dem letzten Stand der App behalten
+            let direkt = (e.daten.uebersicht?.sendungen ?? []).filter { $0.quelle == "direkt" }
+            u.sendungen = zusammenfuehren(ha: u.sendungen, direkt: direkt)
+            e = Eintrag(date: Date(), daten: WidgetDaten(uebersicht: u, eingerichtet: true))
+        }
+        // um Mitternacht neu (für „kommt heute“), sonst alle 30 Minuten
+        let mitternacht = Calendar.current.startOfDay(for: Date().addingTimeInterval(86400))
+        return Timeline(entries: [e], policy: .after(min(Date().addingTimeInterval(1800), mitternacht)))
     }
 }
 
 struct PaketeWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "pakete", provider: Anbieter()) { e in
+        AppIntentConfiguration(kind: "pakete", intent: WidgetZugang.self, provider: Zeitleiste()) { e in
             WidgetInhalt(e: e)
         }
         .configurationDisplayName(T("Pakete"))

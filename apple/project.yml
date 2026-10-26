@@ -5,6 +5,7 @@ options:
   deploymentTarget:
     iOS: "17.0"
     macOS: "14.0"
+    watchOS: "10.0"
   createIntermediateGroups: true
 packages:
   PaketKern:
@@ -41,6 +42,9 @@ targets:
       - target: PaketboteWidgets-iOS
         embed: true
         codeSign: true
+      - target: PaketboteTeilen
+        embed: true
+        codeSign: true
     settings:
       base:
         PRODUCT_NAME: Paketbote
@@ -73,6 +77,43 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: ressourcen/Widgets-iOS.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+  PaketboteTeilen:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Sources/Teilen
+    settings:
+      base:
+        PRODUCT_NAME: PaketboteTeilen
+        PRODUCT_BUNDLE_IDENTIFIER: de.teyro.paketbote.teilen
+        INFOPLIST_FILE: ressourcen/Teilen.plist
+        GENERATE_INFOPLIST_FILE: NO
+        # öffnet die App über die Responder-Kette (sonst für Erweiterungen gesperrt)
+        APPLICATION_EXTENSION_API_ONLY: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+  Paketbote-Uhr:
+    type: application
+    platform: watchOS
+    sources:
+      - path: Sources/Uhr
+      - path: Sources/Widgets/Bausteine.swift
+      - path: ressourcen/Assets.xcassets
+      - path: ressourcen/i18n
+        type: folder
+        buildPhase: resources
+      - path: ressourcen/sprachen
+        buildPhase: resources
+    dependencies:
+      - package: PaketKern
+    settings:
+      base:
+        PRODUCT_NAME: Paketbote Uhr
+        PRODUCT_BUNDLE_IDENTIFIER: de.teyro.paketbote.watchkitapp
+        INFOPLIST_FILE: ressourcen/Uhr.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SKIP_INSTALL: YES
   Paketbote-Mac:
     type: application
@@ -133,6 +174,11 @@ schemes:
       targets:
         Paketbote-iOS: all
         PaketboteWidgets-iOS: all
+        PaketboteTeilen: all
+  Paketbote-Uhr:
+    build:
+      targets:
+        Paketbote-Uhr: all
   Paketbote-Mac:
     build:
       targets:

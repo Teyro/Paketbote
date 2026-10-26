@@ -31,6 +31,8 @@
 	<!-- Home Assistant läuft im Heimnetz oft ohne HTTPS -->
 	<key>NSAppTransportSecurity</key>
 	<dict><key>NSAllowsArbitraryLoads</key><true/><key>NSAllowsLocalNetworking</key><true/></dict>
+	<key>NSCameraUsageDescription</key><string>Zum Scannen der Sendungsnummer auf dem Paketschein.</string>
+	<key>NSSupportsLiveActivities</key><true/>
 	<key>NSLocalNetworkUsageDescription</key><string>Paketbote verbindet sich mit Home Assistant in deinem Heimnetz.</string>
 </dict>
 </plist>

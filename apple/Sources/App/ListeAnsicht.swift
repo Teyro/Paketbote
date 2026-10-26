@@ -27,6 +27,12 @@ struct Hauptansicht: View {
         .sheet(isPresented: $kern.hinzufuegenOffen) {
             HinzufuegenAnsicht(kern: kern)
         }
+        .sheet(isPresented: $kern.statistikOffen) {
+            NavigationStack { StatistikAnsicht(kern: kern) }
+                #if os(macOS)
+                .frame(minWidth: 560, minHeight: 600)
+                #endif
+        }
         .sheet(isPresented: $kern.einstellungenOffen) {
             NavigationStack { EinstellungenAnsicht(kern: kern) }
                 #if os(macOS)
@@ -36,7 +42,7 @@ struct Hauptansicht: View {
         .overlay(alignment: .bottom) { MeldungsBand(kern: kern) }
         .task {
             await kern.laden()
-            if !kern.einstellungen.eingerichtet && !kern.vorschau { kern.einstellungenOffen = true }
+            if !kern.bereit && !kern.vorschau { kern.einstellungenOffen = true }
         }
     }
 }
@@ -71,7 +77,7 @@ struct SendungsListe: View {
     var body: some View {
         let g = kern.gruppen
         List(selection: $kern.auswahl) {
-            if !kern.einstellungen.eingerichtet {
+            if !kern.bereit {
                 Section {
                     EinrichtenHinweis(kern: kern)
                 }
@@ -100,11 +106,12 @@ struct SendungsListe: View {
         .listStyle(.sidebar)
         #endif
         .overlay {
-            if kern.einstellungen.eingerichtet && kern.daten != nil && g.aktiv.isEmpty && g.zugestellt.isEmpty {
+            if kern.bereit && (kern.daten != nil || !kern.einstellungen.eingerichtet) && g.aktiv.isEmpty && g.zugestellt.isEmpty {
                 ContentUnavailableView {
                     Label(T("Keine Pakete unterwegs"), systemImage: "shippingbox")
                 } description: {
-                    Text(T("Versandmails von DHL, Hermes, DPD, GLS, UPS und Amazon erscheinen hier – oder eine Sendung mit ＋ hinzufügen."))
+                    Text(kern.einstellungen.eingerichtet ? T("Versandmails von DHL, Hermes, DPD, GLS, UPS und Amazon erscheinen hier – oder eine Sendung mit ＋ hinzufügen.")
+                         : T("Sendungsnummer mit ＋ eintragen oder den Paketschein scannen – Paketbote holt Stand, Verlauf und Karte."))
                 } actions: {
                     Button(T("Sendung hinzufügen")) { kern.hinzufuegenOffen = true }.buttonStyle(.borderedProminent)
                 }
@@ -113,17 +120,28 @@ struct SendungsListe: View {
             }
         }
         .refreshable { await kern.laden() }
+        .dropDestination(for: String.self) { texte, _ in
+            guard let n = texte.lazy.compactMap({ Dienst.nummerIn($0) }).first else { return false }
+            kern.hinzufuegenNummer = n
+            kern.hinzufuegenOffen = true
+            return true
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { kern.hinzufuegenOffen = true } label: { Label(T("Sendung hinzufügen"), systemImage: "plus") }
                     .keyboardShortcut("n")
-                    .disabled(!kern.einstellungen.eingerichtet)
             }
             ToolbarItem {
                 Menu {
-                    Button { Task { await kern.jetztNachsehen() } } label: { Label(T("Postfach jetzt lesen"), systemImage: "envelope.arrow.triangle.branch") }
+                    if kern.einstellungen.eingerichtet {
+                        Button { Task { await kern.jetztNachsehen() } } label: { Label(T("Postfach jetzt lesen"), systemImage: "envelope.arrow.triangle.branch") }
+                    }
                     Button { Task { await kern.laden() } } label: { Label(T("Neu laden"), systemImage: "arrow.clockwise") }
                     Divider()
+                    Button { kern.statistikOffen = true } label: { Label(T("Statistik"), systemImage: "chart.bar.xaxis") }
+                    #if os(macOS)
+                    Button { Drucken.liste(kern) } label: { Label(T("Drucken …"), systemImage: "printer") }
+                    #endif
                     Button { kern.einstellungenOffen = true } label: { Label(T("Einstellungen …"), systemImage: "gearshape") }
                 } label: {
                     Label(T("Mehr"), systemImage: "ellipsis.circle")
@@ -184,9 +202,12 @@ struct SendungsZeile: View {
             DienstLogo(dienst: sendung.dienst, groesse: 44)
                 .opacity(sendung.fertig ? 0.6 : 1)
             VStack(alignment: .leading, spacing: 4) {
-                Text(sendung.titel)
-                    .font(.body.weight(.semibold))
-                    .lineLimit(1)
+                HStack(spacing: 5) {
+                    if sendung.ruecksendung { Etikett(text: T("Rücksendung"), farbe: .purple) }
+                    Text(sendung.titel)
+                        .font(.body.weight(.semibold))
+                        .lineLimit(1)
+                }
                 Text(Texte.zeile(sendung, mitKonto: mitKonto))
                     .font(.subheadline)
                     .foregroundStyle(standFarbe(sendung))
@@ -204,10 +225,13 @@ struct EinrichtenHinweis: View {
     let kern: Kern
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(T("Mit Home Assistant verbinden"), systemImage: "house.fill").font(.headline)
-            Text(T("Paketbote zeigt die Sendungen der Home-Assistant-Integration „Briefankündigung“ (HACS). Adresse und Token eintragen."))
+            Label(T("Willkommen bei Paketbote"), systemImage: "shippingbox.fill").font(.headline)
+            Text(T("Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen auch die Pakete aus deinen Versandmails dazu."))
                 .font(.callout).foregroundStyle(.secondary)
-            Button(T("Einrichten …")) { kern.einstellungenOffen = true }.buttonStyle(.borderedProminent)
+            HStack {
+                Button(T("Sendung hinzufügen")) { kern.einstellungen.direktModus = true; kern.hinzufuegenOffen = true }.buttonStyle(.borderedProminent)
+                Button(T("Home Assistant …")) { kern.einstellungenOffen = true }.buttonStyle(.bordered)
+            }
         }
         .padding(.vertical, 6)
     }

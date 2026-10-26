@@ -54,7 +54,7 @@ struct WidgetLeer: View {
             Image(systemName: !daten.eingerichtet ? "gearshape" : "shippingbox")
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(.secondary)
-            Text(!daten.eingerichtet ? T("App öffnen und einrichten") : T("Keine Pakete unterwegs"))
+            Text(!daten.eingerichtet ? (Ablage.gruppeDa ? T("App öffnen und einrichten") : T("Widget lange drücken → „Widget bearbeiten“ → Home Assistant eintragen")) : T("Keine Pakete unterwegs"))
                 .font(.system(size: 12, weight: .medium))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)

@@ -32,6 +32,12 @@ struct PaketboteMac: App {
             CommandGroup(replacing: .newItem) {
                 Button(T("Sendung hinzufügen …")) { kern.hinzufuegenOffen = true }.keyboardShortcut("n")
             }
+            CommandGroup(replacing: .printItem) {
+                Button(T("Drucken …")) { Drucken.liste(kern) }.keyboardShortcut("p")
+            }
+            CommandGroup(after: .sidebar) {
+                Button(T("Statistik")) { kern.statistikOffen = true }.keyboardShortcut("s", modifiers: [.command, .option])
+            }
         }
 
         MenuBarExtra {
@@ -59,6 +65,7 @@ struct MenueListe: View {
                 Button { Task { await kern.laden() } } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless)
             }
             if !kern.fehler.isEmpty { Text(kern.fehler).font(.caption).foregroundStyle(.red) }
+            Text(T("Nummer hierher ziehen oder ⌥⌘P drücken")).font(.caption2).foregroundStyle(.tertiary)
             ForEach(g.aktiv.prefix(8)) { s in
                 Button { zeigen(s.id) } label: { SendungsZeile(sendung: s, mitKonto: kern.mehrereKonten).contentShape(Rectangle()) }
                     .buttonStyle(.plain)
@@ -75,6 +82,14 @@ struct MenueListe: View {
         }
         .padding(14)
         .frame(width: 340)
+        // Sendungsnummer oder Mail-Text hier ablegen
+        .dropDestination(for: String.self) { texte, _ in
+            guard let n = texte.lazy.compactMap({ Dienst.nummerIn($0) }).first else { return false }
+            kern.hinzufuegenNummer = n
+            kern.hinzufuegenOffen = true
+            zeigen(nil)
+            return true
+        }
     }
 
     private func zeigen(_ id: String?) {
@@ -90,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         MainActor.assumeIsolated {
             let kern = Kern.shared
             guard !kern.vorschau else { return }
+            Tastenkuerzel.anmelden()
             // regelmäßig neu laden (die Menüleiste läuft ja immer)
             Task {
                 while true {

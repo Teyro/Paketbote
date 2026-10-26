@@ -3,9 +3,10 @@ import Observation
 import SwiftUI
 import UserNotifications
 import WidgetKit
+import Security
 import PaketKern
 
-/// Zustand der App: Zugang, Sendungen, Aktionen. Gemeinsam für iPhone und Mac.
+/// Zustand der App: Zugang, Sendungen (aus Home Assistant und direkt verfolgt), Aktionen. Gemeinsam für iPhone und Mac.
 @MainActor
 @Observable
 final class Kern {
@@ -14,21 +15,37 @@ final class Kern {
     /// Testlauf für die Bildschirmfotos (GitHub Actions): `--vorschau` mit PB_ADRESSE, PB_TOKEN
     let vorschau = CommandLine.arguments.contains("--vorschau")
     let einstellungen: Einstellungen
+    /// Stand aus Home Assistant
     private(set) var daten: Uebersicht?
+    /// Direkt verfolgte Sendungen, Notizen
+    private(set) var direkt = DirektListe.laden()
     private(set) var laedt = false
     private(set) var fehler = ""
+    /// Fehler der Anbieter beim letzten direkten Abruf (Anbieter → Text)
+    private(set) var anbieterFehler: [String: String] = [:]
     /// Kurze Meldung (z. B. „Hinzugefügt“ oder ein Fehler bei einer Aktion)
     var meldung = ""
     /// Gewählte Sendung (Liste → Detail; auch aus Widgets und Mitteilungen)
     var auswahl: String?
     var hinzufuegenOffen = false
+    /// Vorgabe fürs Hinzufügen (aus Teilen-Menü, Scanner, Ziehen auf den Mac)
+    var hinzufuegenNummer = ""
     var einstellungenOffen = false
+    var statistikOffen = false
+    /// Wird nach jedem Laden aufgerufen (iPhone: Live-Aktivitäten, Uhr)
+    @ObservationIgnored var nachLaden: (Kern) -> Void = { _ in }
 
     var ha: HomeAssistant { HomeAssistant(adresse: einstellungen.adresse, token: einstellungen.token, konto: einstellungen.konto) }
-    var gruppen: Gruppen { Gruppen(daten?.sendungen ?? [], tage: einstellungen.tageZugestellt) }
+    var verfolgung: Verfolgung { Verfolgung(schluessel: einstellungen.schluessel) }
+    /// Alle Sendungen: aus Home Assistant und direkt verfolgt (gleiche Nummer nur einmal)
+    var alle: [Sendung] { zusammenfuehren(ha: daten?.sendungen ?? [], direkt: direkt.sendungen) }
+    var gruppen: Gruppen { Gruppen(alle, tage: einstellungen.tageZugestellt) }
     var mehrereKonten: Bool { daten?.mehrereKonten ?? false }
+    /// Ist überhaupt etwas eingerichtet (Home Assistant oder direkt verfolgen)?
+    var bereit: Bool { einstellungen.eingerichtet || !direkt.sendungen.isEmpty || einstellungen.direktModus }
 
-    func sendung(_ id: String?) -> Sendung? { daten?.sendungen.first { $0.id == id } }
+    func sendung(_ id: String?) -> Sendung? { alle.first { $0.id == id } }
+    func notiz(_ id: String) -> String { direkt.notizen[id] ?? "" }
 
     private init() {
         Sprache.laden()
@@ -37,28 +54,57 @@ final class Kern {
             let env = ProcessInfo.processInfo.environment
             einstellungen.adresse = env["PB_ADRESSE"] ?? "http://127.0.0.1:8123"
             einstellungen.token = env["PB_TOKEN"] ?? "test-token"
+            direkt = DirektListe()
+            var d = DirektListe()
+            var s = d.hinzufuegen(nummer: "1Z999AA10123456784", dienst: "ups", name: "Rücksendung Jacke", ruecksendung: true)
+            var spur = Spur()
+            spur.stand = "unterwegs"; spur.quelle = "UPS"; spur.erwartet = Texte.isoTag(Date().addingTimeInterval(3 * 86400))
+            spur.ereignisse = [Ereignis(zeit: Date().addingTimeInterval(-7200), text: "Abholung erfolgt", ort: "Hamburg")]
+            s.uebernehmen(spur)
+            d.sendungen[0] = s
+            d.notizen[s.id] = "Etikett liegt im Flur"
+            direkt = d
         } else {
             daten = Ablage.lesen()
         }
     }
 
-    /// Neu laden; meldet neue Stände (Mitteilungen) und schreibt den Stand für die Widgets
+    /// Neu laden (Home Assistant und direkt verfolgte); meldet neue Stände und schreibt den Stand für die Widgets
     func laden(still: Bool = false) async {
-        guard einstellungen.eingerichtet else { fehler = ""; return }
         if !still { laedt = true }
         defer { laedt = false }
-        do {
-            let neu = try await ha.laden()
-            if daten != nil && einstellungen.mitteilungen { await melden(alt: daten!, neu: neu) }
-            daten = neu
+        let vorher = alle
+        if einstellungen.eingerichtet {
+            do {
+                daten = try await ha.laden()
+                fehler = ""
+            } catch let e as HAFehler {
+                fehler = e.text
+            } catch {
+                fehler = error.localizedDescription
+            }
+        } else {
             fehler = ""
-            Ablage.schreiben(neu)
-            WidgetCenter.shared.reloadAllTimelines()
-        } catch let e as HAFehler {
-            fehler = e.text
-        } catch {
-            fehler = error.localizedDescription
         }
+        if !direkt.sendungen.isEmpty && !vorschau {
+            // ohne await auf die Eigenschaft: Kopie bearbeiten, dann zurückschreiben
+            var liste = direkt
+            _ = await liste.aktualisieren(verfolgung)
+            direkt = liste
+            liste.speichern()
+        }
+        if einstellungen.mitteilungen && !vorher.isEmpty { await melden(alt: vorher, neu: alle) }
+        widgetsSchreiben()
+        nachLaden(self)
+    }
+
+    /// Stand für Widgets (App-Gruppe bzw. Ersatzweg) und Neuzeichnen
+    func widgetsSchreiben() {
+        var u = daten ?? Uebersicht()
+        u.sendungen = alle
+        u.geholt = Date()
+        Ablage.schreiben(u)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Eine Aktion ausführen, danach neu laden; Fehler als Meldung
@@ -76,23 +122,97 @@ final class Kern {
         return false
     }
 
-    func hinzufuegen(nummer: String, dienst: String, name: String) async -> Bool {
-        let ha = ha
-        return await aktion(erfolg: T("Hinzugefügt")) { try await ha.hinzufuegen(nummer: nummer, dienst: dienst, name: name) }
+    /// Sendung verfolgen: auf dem Gerät (direkt) und – wenn eingerichtet – auch in Home Assistant
+    func hinzufuegen(nummer: String, dienst: String, name: String, ruecksendung: Bool = false) async -> Bool {
+        var liste = direkt
+        let neu = liste.hinzufuegen(nummer: nummer, dienst: dienst, name: name, ruecksendung: ruecksendung)
+        direkt = liste
+        liste.speichern()
+        auswahl = neu.id
+        if einstellungen.eingerichtet && einstellungen.auchInHA {
+            let ha = ha
+            // Home Assistant kennt die Nummer dann auch (Widgets, andere Geräte, Mitteilungen)
+            _ = await aktion(erfolg: T("Hinzugefügt")) { try await ha.hinzufuegen(nummer: nummer, dienst: dienst, name: name) }
+        } else {
+            meldung = T("Hinzugefügt")
+            await laden(still: true)
+        }
+        return true
+    }
+
+    /// Sofort einmal abfragen (beim Öffnen einer direkt verfolgten Sendung)
+    func jetztAbfragen(_ s: Sendung) async {
+        guard s.quelle == "direkt" || s.ereignisse.isEmpty, !s.nummer.isEmpty else { return }
+        let (spur, f) = await verfolgung.abfragen(s.nummer, dienst: s.dienst)
+        anbieterFehler = f.mapValues(Self.fehlerText)
+        guard let spur, var liste = Optional(direkt) else {
+            if f.isEmpty && verfolgung.moeglich(s.dienst).isEmpty { anbieterFehler["–"] = T("Kein Anbieter für %1 eingerichtet.", s.dienstName) }
+            return
+        }
+        if let i = liste.sendungen.firstIndex(where: { $0.nummer == s.nummer }) {
+            liste.sendungen[i].uebernehmen(spur)
+        } else {
+            // Sendung aus Home Assistant ohne Verlauf: direkt mitverfolgen
+            var n = liste.hinzufuegen(nummer: s.nummer, dienst: s.dienst, name: s.name)
+            n.uebernehmen(spur)
+            liste.sendungen[0] = n
+        }
+        direkt = liste
+        liste.speichern()
+        widgetsSchreiben()
+    }
+
+    static func fehlerText(_ f: AnbieterFehler) -> String {
+        switch f {
+        case .keinSchluessel: T("kein Schlüssel")
+        case .unbekannt: T("kennt die Nummer (noch) nicht")
+        case .abgelehnt: T("Schlüssel abgelehnt")
+        case .kontingent: T("Kontingent aufgebraucht")
+        case .netz: T("nicht erreichbar")
+        case .antwort(let t): T("unerwartete Antwort (%1)", t)
+        }
     }
 
     func entfernen(_ s: Sendung) async {
         if auswahl == s.id { auswahl = nil }
-        let ha = ha
-        _ = await aktion { try await ha.entfernen(s.id) }
+        var liste = direkt
+        let nummer = s.nummer
+        liste.sendungen.removeAll { $0.id == s.id || (!nummer.isEmpty && $0.nummer == nummer) }
+        direkt = liste
+        liste.speichern()
+        if s.quelle == "ha" || daten?.sendungen.contains(where: { $0.nummer == nummer && $0.manuell }) == true {
+            let ha = ha
+            let id = daten?.sendungen.first(where: { $0.id == s.id || $0.nummer == nummer })?.id ?? s.id
+            _ = await aktion { try await ha.entfernen(id) }
+        } else {
+            widgetsSchreiben()
+        }
     }
 
     func umbenennen(_ s: Sendung, _ name: String) async {
-        let ha = ha
-        _ = await aktion { try await ha.umbenennen(s.id, name) }
+        var liste = direkt
+        for i in liste.sendungen.indices where liste.sendungen[i].id == s.id || liste.sendungen[i].nummer == s.nummer {
+            liste.sendungen[i].name = name
+        }
+        direkt = liste
+        liste.speichern()
+        if s.quelle == "ha" {
+            let ha = ha
+            _ = await aktion { try await ha.umbenennen(s.id, name) }
+        } else {
+            widgetsSchreiben()
+        }
     }
 
     func erledigt(_ s: Sendung, _ ja: Bool) async {
+        if s.quelle == "direkt" {
+            var liste = direkt
+            if let i = liste.sendungen.firstIndex(where: { $0.id == s.id }) { liste.sendungen[i].erledigt = ja }
+            direkt = liste
+            liste.speichern()
+            widgetsSchreiben()
+            return
+        }
         // sofort zeigen, dann speichern
         if var d = daten, let i = d.sendungen.firstIndex(where: { $0.id == s.id }) {
             d.sendungen[i].erledigt = ja
@@ -100,6 +220,13 @@ final class Kern {
         }
         let ha = ha
         _ = await aktion { try await ha.erledigt(s.id, ja) }
+    }
+
+    func notizSetzen(_ id: String, _ text: String) {
+        var liste = direkt
+        liste.notizen[id] = text.isEmpty ? nil : String(text.prefix(500))
+        direkt = liste
+        liste.speichern()
     }
 
     /// Home Assistant jetzt ins Postfach schauen lassen, ein paar Mal nachladen
@@ -118,9 +245,9 @@ final class Kern {
         _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
     }
 
-    private func melden(alt: Uebersicht, neu: Uebersicht) async {
-        let vorher = Dictionary(alt.sendungen.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        for s in neu.sendungen {
+    private func melden(alt: [Sendung], neu: [Sendung]) async {
+        let vorher = Dictionary(alt.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        for s in neu {
             guard let m = Texte.mitteilung(alt: vorher[s.id], neu: s) else { continue }
             let inhalt = UNMutableNotificationContent()
             inhalt.title = m.titel
@@ -133,8 +260,7 @@ final class Kern {
     }
 }
 
-/// Einstellungen: Adresse, Postfach, Mitteilungen in der gemeinsamen Ablage (auch für Widgets und Kurzbefehle);
-/// der Token auf dem Mac im Schlüsselbund, auf dem iPhone in der App-Gruppe (die Widgets laden selbst).
+/// Einstellungen: Adresse, Postfach, Anzeige in den Benutzereinstellungen; Token und Schlüssel im Schlüsselbund
 @MainActor
 @Observable
 final class Einstellungen {
@@ -144,48 +270,57 @@ final class Einstellungen {
     var adresse: String { didSet { if !vorschau { d.set(adresse, forKey: "adresse") } } }
     var konto: String { didSet { if !vorschau { d.set(konto, forKey: "konto") } } }
     var mitteilungen: Bool { didSet { d.set(mitteilungen, forKey: "mitteilungen") } }
-    /// Sortierung der Zugestellten: so viele Tage zeigen
     var tageZugestellt: Int { didSet { d.set(tageZugestellt, forKey: "tageZugestellt") } }
+    /// Direkt verfolgte Sendungen auch in Home Assistant eintragen
+    var auchInHA: Bool { didSet { d.set(auchInHA, forKey: "auchInHA") } }
+    /// Ohne Home Assistant benutzen (nur direkt verfolgen)
+    var direktModus: Bool { didSet { d.set(direktModus, forKey: "direktModus") } }
+    /// Live-Aktivität für Pakete, die heute kommen (iPhone)
+    var liveAktivitaet: Bool { didSet { d.set(liveAktivitaet, forKey: "liveAktivitaet") } }
     var token: String {
         didSet {
             guard !vorschau else { return }
-            #if os(macOS)
-            Schluesselbund.speichern(token)
-            #else
-            d.set(token, forKey: "token")
+            Schluesselbund.speichern(token, konto: "token")
+            #if os(iOS)
+            // klappt die App-Gruppe, dürfen die Widgets selbst bei Home Assistant nachfragen
+            if Ablage.gruppeDa { d.set(token, forKey: "token") }
             #endif
         }
+    }
+    var schluessel: Schluessel {
+        didSet { if !vorschau, let j = try? JSONEncoder().encode(schluessel) { Schluesselbund.speichern(String(decoding: j, as: UTF8.self), konto: "schluessel") } }
     }
 
     init(vorschau: Bool) {
         self.vorschau = vorschau
-        d.register(defaults: ["mitteilungen": true, "tageZugestellt": 14])
+        d.register(defaults: ["mitteilungen": true, "tageZugestellt": 14, "auchInHA": true, "direktModus": false, "liveAktivitaet": true])
         adresse = vorschau ? "" : d.string(forKey: "adresse") ?? ""
         konto = vorschau ? "" : d.string(forKey: "konto") ?? ""
         mitteilungen = d.bool(forKey: "mitteilungen")
         tageZugestellt = d.integer(forKey: "tageZugestellt")
-        #if os(macOS)
-        token = vorschau ? "" : Schluesselbund.lesen() ?? ""
-        #else
-        token = vorschau ? "" : d.string(forKey: "token") ?? ""
-        #endif
+        auchInHA = d.bool(forKey: "auchInHA")
+        direktModus = d.bool(forKey: "direktModus")
+        liveAktivitaet = d.bool(forKey: "liveAktivitaet")
+        // bis 1.0 lag der Token auf dem iPhone in den Einstellungen
+        let alt = d.string(forKey: "token") ?? ""
+        token = vorschau ? "" : Schluesselbund.lesen(konto: "token") ?? alt
+        schluessel = vorschau ? Schluessel() : Schluesselbund.lesen(konto: "schluessel").flatMap { try? JSONDecoder().decode(Schluessel.self, from: Data($0.utf8)) } ?? Schluessel()
+        if !vorschau && !alt.isEmpty && Schluesselbund.lesen(konto: "token") == nil { Schluesselbund.speichern(alt, konto: "token") }
     }
 
     var eingerichtet: Bool { !adresse.isEmpty && !token.isEmpty }
 }
 
-#if os(macOS)
-import Security
-
-/// Token im Schlüsselbund von macOS
+/// Token und Schlüssel im Schlüsselbund (iPhone und Mac)
 enum Schluesselbund {
     static let dienst = "de.teyro.paketbote"
-    static var basis: [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: dienst, kSecAttrAccount as String: "token"]
+
+    static func basis(_ konto: String) -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: dienst, kSecAttrAccount as String: konto]
     }
 
-    static func lesen() -> String? {
-        var q = basis
+    static func lesen(konto: String) -> String? {
+        var q = basis(konto)
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var e: AnyObject?
@@ -193,15 +328,17 @@ enum Schluesselbund {
         return String(data: d, encoding: .utf8)
     }
 
-    static func speichern(_ token: String) {
-        guard !token.isEmpty else { SecItemDelete(basis as CFDictionary); return }
-        let daten = Data(token.utf8)
-        if SecItemUpdate(basis as CFDictionary, [kSecValueData as String: daten] as CFDictionary) == errSecItemNotFound {
-            var neu = basis
+    static func speichern(_ wert: String, konto: String) {
+        guard !wert.isEmpty else { SecItemDelete(basis(konto) as CFDictionary); return }
+        let daten = Data(wert.utf8)
+        if SecItemUpdate(basis(konto) as CFDictionary, [kSecValueData as String: daten] as CFDictionary) == errSecItemNotFound {
+            var neu = basis(konto)
             neu[kSecValueData as String] = daten
-            neu[kSecAttrLabel as String] = "Paketbote – Home Assistant Token"
+            neu[kSecAttrLabel as String] = "Paketbote – " + konto
+            #if os(iOS)
+            neu[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            #endif
             SecItemAdd(neu as CFDictionary, nil)
         }
     }
 }
-#endif

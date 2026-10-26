@@ -39,16 +39,39 @@ public struct Sendung: Codable, Hashable, Sendable, Identifiable {
     public var kontoId: String
     public var kontoName: String
     public var ereignisse: [Ereignis]
+    /// "ha" (aus Home Assistant) oder "direkt" (die App verfolgt selbst)
+    public var quelle: String = "ha"
+    /// Wer zuletzt geantwortet hat (Direkt: "DHL", "17TRACK" …)
+    public var anbieter: String = ""
+    /// Rücksendung (eigenes Etikett)
+    public var ruecksendung: Bool = false
 
     public init(id: String, datum: Date = Date(), absender: String = "", name: String = "", nummer: String = "", dienst: String = "dhl",
                 dienstName: String = "", stand: String = "unterwegs", erwartet: String = "", zeitfenster: String = "", kundenkonto: String = "",
                 verfolgen: String = "", manuell: Bool = false, statusText: String = "", problem: Bool = false, erledigt: Bool = false,
-                kontoId: String = "", kontoName: String = "", ereignisse: [Ereignis] = []) {
+                kontoId: String = "", kontoName: String = "", ereignisse: [Ereignis] = [], quelle: String = "ha", ruecksendung: Bool = false) {
         self.id = id; self.datum = datum; self.absender = absender; self.name = name; self.nummer = nummer; self.dienst = dienst
         self.dienstName = dienstName.isEmpty ? Dienst.name(dienst) : dienstName; self.stand = stand; self.erwartet = erwartet
         self.zeitfenster = zeitfenster; self.kundenkonto = kundenkonto; self.verfolgen = verfolgen; self.manuell = manuell
         self.statusText = statusText; self.problem = problem; self.erledigt = erledigt; self.kontoId = kontoId; self.kontoName = kontoName
-        self.ereignisse = ereignisse
+        self.ereignisse = ereignisse; self.quelle = quelle; self.ruecksendung = ruecksendung
+    }
+
+    /// Stand eines Anbieters übernehmen (Direkt verfolgen); true, wenn sich etwas geändert hat
+    @discardableResult
+    public mutating func uebernehmen(_ spur: Spur, jetzt: Date = Date()) -> Bool {
+        let vorher = self
+        if spur.stand != stand || !spur.ereignisse.isEmpty { stand = spur.stand }
+        if !spur.erwartet.isEmpty { erwartet = spur.erwartet }
+        if !spur.zeitfenster.isEmpty { zeitfenster = spur.zeitfenster }
+        if !spur.text.isEmpty { statusText = spur.text }
+        problem = spur.problem
+        var alle = spur.ereignisse
+        for e in ereignisse where !alle.contains(where: { $0.id == e.id }) { alle.append(e) }
+        ereignisse = alle.sorted { ($0.zeit ?? .distantPast) > ($1.zeit ?? .distantPast) }
+        anbieter = spur.quelle
+        if self != vorher { datum = jetzt }
+        return self != vorher
     }
 
     /// Was angezeigt wird: eigener Name, sonst Absender, sonst die Nummer
@@ -135,7 +158,7 @@ public struct Uebersicht: Codable, Hashable, Sendable {
         if let d = iso.date(from: s) { return d }
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
-        for muster in ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd"] {
+        for muster in ["yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd HH:mm:ss", "dd.MM.yyyy HH:mm:ss", "dd.MM.yyyy, HH:mm", "dd.MM.yyyy HH:mm", "yyyy-MM-dd", "dd.MM.yyyy"] {
             f.dateFormat = muster
             if let d = f.date(from: String(s.prefix(muster.replacingOccurrences(of: "'", with: "").count))) { return d }
         }
