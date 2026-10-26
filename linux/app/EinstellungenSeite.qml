@@ -46,6 +46,51 @@ Kirigami.ScrollablePage {
                                            seite.ha.sendungen.filter(function (s) { return s.stand !== "zugestellt" && !s.erledigt; }).length) : "…"
         }
 
+        Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Direkt verfolgen") }
+        QQC2.Label {
+            Layout.maximumWidth: Kirigami.Units.gridUnit * 20
+            text: S.t("Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein.")
+            wrapMode: Text.Wrap
+            font: Kirigami.Theme.smallFont
+            color: Kirigami.Theme.disabledTextColor
+        }
+        Kirigami.PasswordField {
+            Kirigami.FormData.label: S.t("DHL-API-Schlüssel")
+            text: seite.einstellungen.dhl
+            onEditingFinished: seite.einstellungen.dhl = text.trim()
+        }
+        QQC2.TextField {
+            Kirigami.FormData.label: S.t("UPS Client-ID")
+            text: seite.einstellungen.upsId
+            onEditingFinished: seite.einstellungen.upsId = text.trim()
+        }
+        Kirigami.PasswordField {
+            Kirigami.FormData.label: S.t("UPS Client-Secret")
+            text: seite.einstellungen.upsGeheim
+            onEditingFinished: seite.einstellungen.upsGeheim = text.trim()
+        }
+        Kirigami.PasswordField {
+            Kirigami.FormData.label: S.t("17TRACK-Schlüssel")
+            text: seite.einstellungen.siebzehn
+            onEditingFinished: seite.einstellungen.siebzehn = text.trim()
+        }
+        Kirigami.PasswordField {
+            Kirigami.FormData.label: S.t("Ship24-Schlüssel")
+            text: seite.einstellungen.ship24
+            onEditingFinished: seite.einstellungen.ship24 = text.trim()
+        }
+        QQC2.CheckBox {
+            text: S.t("Öffentliche Seiten von GLS und DPD als Notnagel")
+            checked: seite.einstellungen.oeffentlich
+            onToggled: seite.einstellungen.oeffentlich = checked
+        }
+        QQC2.CheckBox {
+            visible: seite.ha.eingerichtet
+            text: S.t("Auch in Home Assistant eintragen")
+            checked: seite.einstellungen.auchInHA
+            onToggled: seite.einstellungen.auchInHA = checked
+        }
+
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Anzeige") }
         QQC2.ComboBox {
             Kirigami.FormData.label: S.t("Postfach")
@@ -62,7 +107,7 @@ Kirigami.ScrollablePage {
         }
 
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Über") }
-        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: "1.0.0" }
+        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: "1.1.0" }
         Kirigami.UrlButton { Kirigami.FormData.label: S.t("Paketbote auf GitHub"); url: "https://github.com/Teyro/Paketbote" }
         Kirigami.UrlButton { Kirigami.FormData.label: S.t("Integration (HACS)"); url: "https://github.com/Teyro/Briefankuendigung-HA" }
     }

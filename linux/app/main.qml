@@ -29,6 +29,15 @@ Kirigami.ApplicationWindow {
         property string token: ""
         property string konto: ""
         property int tageZugestellt: 14
+        // direkt verfolgte Sendungen (JSON) und Schlüssel der Anbieter
+        property string direkt: "[]"
+        property string dhl: ""
+        property string upsId: ""
+        property string upsGeheim: ""
+        property string siebzehn: ""
+        property string ship24: ""
+        property bool oeffentlich: true
+        property bool auchInHA: true
     }
 
     property double jetzt: Date.now()
@@ -39,9 +48,20 @@ Kirigami.ApplicationWindow {
         adresse: einstellungen.adresse
         token: einstellungen.token
         konto: einstellungen.konto
+        auchInHA: einstellungen.auchInHA
+        schluessel: ({ dhl: einstellungen.dhl, upsId: einstellungen.upsId, upsGeheim: einstellungen.upsGeheim,
+                       siebzehn: einstellungen.siebzehn, ship24: einstellungen.ship24, oeffentlich: einstellungen.oeffentlich })
+        direkt: { try { return JSON.parse(einstellungen.direkt); } catch (e) { return []; } }
+        onDirektGeaendert: (liste) => einstellungen.direkt = JSON.stringify(liste)
         onMeldung: (text) => fenster.showPassiveNotification(text)
-        onNeuerStand: (titel, text, id) => fenster.showPassiveNotification(titel + ": " + text, "long")
+        onNeuerStand: (titel, text, id) => {
+            fenster.showPassiveNotification(titel + ": " + text, "long");
+            if (mitteilung.item) mitteilung.item.zeigen(titel, text);
+        }
     }
+
+    // Mitteilung auf dem Schreibtisch (KDE-Benachrichtigungen; fehlt das Modul, bleibt es bei der Meldung im Fenster)
+    Loader { id: mitteilung; source: "../gemeinsam/Mitteilung.qml" }
 
     readonly property var gruppen: Logik.gruppen(verbindung.sendungen, jetzt, einstellungen.tageZugestellt)
     property string auswahl: ""
@@ -100,6 +120,10 @@ Kirigami.ApplicationWindow {
     }
 
     Component.onCompleted: {
-        if (!verbindung.eingerichtet) Qt.callLater(function () { fenster.pageStack.pushDialogLayer(einstellungsSeite); });
+        verbindung.laden();
+        // aus KRunner: --neu <Sendungsnummer>
+        var a = Qt.application.arguments, i = a.indexOf("--neu");
+        if (i >= 0 && a[i + 1]) { formular.vorgabe = a[i + 1]; Qt.callLater(hinzufuegenDialog.open); }
+        else if (!verbindung.bereit) Qt.callLater(function () { fenster.pageStack.pushDialogLayer(einstellungsSeite); });
     }
 }

@@ -7,6 +7,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import "logik.js" as Logik
+import "anbieter.js" as Anbieter
 import "sprache.js" as S
 
 ColumnLayout {
@@ -21,7 +22,9 @@ ColumnLayout {
     readonly property string gewaehlt: dienst.currentIndex > 0 ? dienste[dienst.currentIndex] : erkannt
     readonly property bool bereit: nummer.text.trim() !== "" && gewaehlt !== "" && !laeuft
 
-    function zuruecksetzen() { nummer.text = ""; name.text = ""; dienst.currentIndex = 0; fehler = ""; nummer.forceActiveFocus(); }
+    /// Nummer beim nächsten Öffnen (z. B. aus KRunner)
+    property string vorgabe: ""
+    function zuruecksetzen() { nummer.text = vorgabe; vorgabe = ""; name.text = ""; dienst.currentIndex = 0; ruecksendung.checked = false; fehler = ""; nummer.forceActiveFocus(); }
     function senden() {
         if (!bereit) return;
         laeuft = true;
@@ -30,7 +33,7 @@ ColumnLayout {
             laeuft = false;
             fehler = text;
             if (!text) { zuruecksetzen(); formular.fertig(); }
-        });
+        }, ruecksendung.checked);
     }
     /// Nummer aus der Zwischenablage holen (über ein unsichtbares Textfeld)
     function einfuegen() {
@@ -76,6 +79,10 @@ ColumnLayout {
             placeholderText: S.t("Name, z. B. „Neue Schuhe“ (optional)")
             onAccepted: formular.senden()
         }
+        QQC2.CheckBox {
+            id: ruecksendung
+            Kirigami.FormData.label: S.t("Rücksendung")
+        }
     }
     QQC2.Label {
         Layout.fillWidth: true
@@ -86,7 +93,10 @@ ColumnLayout {
     }
     QQC2.Label {
         Layout.fillWidth: true
-        text: S.t("Home Assistant verfolgt die Sendung ab jetzt mit – Mails zur selben Nummer ergänzen sie.")
+        text: formular.gewaehlt && Anbieter.namen(formular.ha.schluessel, formular.gewaehlt).length
+              ? S.t("Abfrage über %1.", Anbieter.namen(formular.ha.schluessel, formular.gewaehlt).join(" → "))
+              : formular.gewaehlt ? S.t("Für %1 ist noch kein Anbieter eingerichtet (Einstellungen → Direkt verfolgen).", Logik.dienst(formular.gewaehlt).name)
+              : S.t("Paketbote fragt selbst bei den Anbietern nach – auch ohne Home Assistant.")
         font: Kirigami.Theme.smallFont
         color: Kirigami.Theme.disabledTextColor
         wrapMode: Text.Wrap

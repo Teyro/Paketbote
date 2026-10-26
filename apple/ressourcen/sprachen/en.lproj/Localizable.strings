@@ -66,7 +66,6 @@
 "Durchschnittliche Laufzeit" = "Average transit time";
 "Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen auch die Pakete aus deinen Versandmails dazu." = "Just enter a tracking number – or connect Home Assistant to also get the parcels from your shipping mails.";
 "Einfügen" = "Paste";
-"Einrichten …" = "Set up …";
 "Einstellungen" = "Settings";
 "Einstellungen …" = "Settings …";
 "Entfernen" = "Remove";
@@ -95,7 +94,6 @@
 "Home Assistant" = "Home Assistant";
 "Home Assistant …" = "Home Assistant …";
 "Home Assistant ist nicht erreichbar (%1)." = "Home Assistant can’t be reached (%1).";
-"Home Assistant verfolgt die Sendung ab jetzt mit – Mails zur selben Nummer ergänzen sie." = "Home Assistant tracks the shipment from now on – mails with the same number add to it.";
 "Ich verfolge jetzt %1." = "Now tracking %1.";
 "in Zustellung" = "out for delivery";
 "Integration „Briefankündigung“ (HACS)" = "“Briefankündigung” integration (HACS)";
@@ -132,7 +130,6 @@
 "Neu laden" = "Reload";
 "nicht erreichbar" = "unreachable";
 "Noch keine Stationen bekannt." = "No stops known yet.";
-"Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder in Home Assistant einen 17TRACK- bzw. DHL-Schlüssel eintragen." = "No stops known yet. The carrier’s page shows the full history – or add a 17TRACK or DHL key in Home Assistant.";
 "Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder unter Einstellungen → Direkt verfolgen einen Anbieter eintragen." = "No stops known yet. The carrier’s page shows the full history – or add a provider under Settings → Track directly.";
 "Noch nicht eingerichtet." = "Not set up yet.";
 "Notiz und Foto" = "Note and photo";
@@ -148,10 +145,10 @@
 "Paketbote auf dem iPhone öffnen." = "Open Paketbote on your iPhone.";
 "Paketbote auf GitHub" = "Paketbote on GitHub";
 "Paketbote einrichten" = "Set up Paketbote";
+"Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein." = "Paketbote asks the providers in turn: DHL → UPS → 17TRACK → Ship24 → public pages. If one fails, the next one steps in.";
 "Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein. Die Schlüssel bleiben im Schlüsselbund dieses Geräts." = "Paketbote asks the providers in turn: DHL → UPS → 17TRACK → Ship24 → public pages. If one fails, the next one steps in. The keys stay in this device’s keychain.";
 "Paketbote fragt selbst bei den Anbietern nach – auch ohne Home Assistant." = "Paketbote asks the providers itself – even without Home Assistant.";
 "Paketbote fragt selbst bei den Anbietern nach und trägt die Sendung auch in Home Assistant ein." = "Paketbote asks the providers itself and also adds the shipment to Home Assistant.";
-"Paketbote zeigt die Sendungen der Home-Assistant-Integration „Briefankündigung“ (HACS). Adresse und Token eintragen." = "Paketbote shows the shipments of the Home Assistant integration “Briefankündigung” (HACS). Enter the address and a token.";
 "Paketdienst" = "Carrier";
 "Paketdienste" = "Carriers";
 "Pakete" = "Parcels";
@@ -169,6 +166,7 @@
 "Sendung hinzufügen …" = "Add shipment …";
 "Sendungs- oder Bestellnummer" = "Tracking or order number";
 "Sendungsnummer" = "Tracking number";
+"Sendungsnummer mit ＋ eintragen – Paketbote holt Stand, Verlauf und Karte." = "Add a tracking number with ＋ – Paketbote fetches status, history and map.";
 "Sendungsnummer mit ＋ eintragen oder den Paketschein scannen – Paketbote holt Stand, Verlauf und Karte." = "Add a tracking number with ＋ or scan the label – Paketbote fetches status, history and map.";
 "Sendungsnummer oder Paketdienst nicht erkannt." = "Tracking number or carrier not recognised.";
 "Sendungsverfolgung in Home Assistant" = "Tracking in Home Assistant";

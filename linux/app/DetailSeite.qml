@@ -17,6 +17,7 @@ Kirigami.ScrollablePage {
     property double jetzt: Date.now()
 
     title: sendung ? Logik.titel(sendung) : ""
+    onSendungChanged: if (sendung && (sendung.quelle === "direkt" || !sendung.ereignisse.length)) ha.einmalAbfragen(sendung)
 
     actions: [
         Kirigami.Action {
@@ -60,6 +61,7 @@ Kirigami.ScrollablePage {
         sendung: seite.sendung || { ereignisse: [], dienst: "dhl" }
         jetzt: seite.jetzt
         mitKonto: seite.ha.mehrereKonten
+        anbieterFehler: seite.ha.anbieterFehler
     }
 
     Kirigami.PromptDialog {

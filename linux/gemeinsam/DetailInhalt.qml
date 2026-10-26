@@ -14,6 +14,7 @@ ColumnLayout {
     property var sendung
     property bool mitKonto: false
     property double jetzt: Date.now()
+    property var anbieterFehler: ({})
     readonly property string art: Logik.standArt(sendung, jetzt)
     spacing: Kirigami.Units.largeSpacing
 
@@ -28,6 +29,12 @@ ColumnLayout {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
+            Kirigami.Chip {
+                visible: !!detail.sendung.ruecksendung
+                text: S.t("Rücksendung")
+                checkable: false
+                closable: false
+            }
             Kirigami.Heading {
                 Layout.fillWidth: true
                 level: 2
@@ -77,6 +84,15 @@ ColumnLayout {
         }
     }
 
+    // Karte der Stationen (OpenStreetMap; fehlt QtLocation, bleibt sie weg)
+    Loader {
+        Layout.fillWidth: true
+        Layout.preferredHeight: active && status === Loader.Ready ? Kirigami.Units.gridUnit * 12 : 0
+        active: detail.sendung.ereignisse.some(function (e) { return e.ort; })
+        source: "Karte.qml"
+        onLoaded: item.ereignisse = Qt.binding(function () { return detail.sendung.ereignisse; })
+    }
+
     Kirigami.Heading {
         level: 3
         text: S.t("Verlauf")
@@ -84,9 +100,18 @@ ColumnLayout {
     QQC2.Label {
         Layout.fillWidth: true
         visible: !detail.sendung.ereignisse.length
-        text: S.t("Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder in Home Assistant einen 17TRACK- bzw. DHL-Schlüssel eintragen.")
+        text: S.t("Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder unter Einstellungen → Direkt verfolgen einen Anbieter eintragen.")
         wrapMode: Text.Wrap
         color: Kirigami.Theme.disabledTextColor
+    }
+    Repeater {
+        model: detail.sendung.ereignisse.length ? [] : Object.keys(detail.anbieterFehler)
+        QQC2.Label {
+            Layout.fillWidth: true
+            text: modelData + ": " + detail.anbieterFehler[modelData]
+            font: Kirigami.Theme.smallFont
+            color: Kirigami.Theme.disabledTextColor
+        }
     }
     Repeater {
         model: detail.sendung.ereignisse
@@ -137,6 +162,10 @@ ColumnLayout {
         Layout.fillWidth: true
         Kirigami.Separator { Kirigami.FormData.isSection: true }
         QQC2.Label { Kirigami.FormData.label: S.t("Dienst"); text: detail.sendung.dienstName }
+        QQC2.Label {
+            Kirigami.FormData.label: S.t("Quelle")
+            text: (detail.sendung.quelle === "direkt" ? S.t("direkt verfolgt") : S.t("Home Assistant")) + (detail.sendung.anbieter ? " · " + detail.sendung.anbieter : "")
+        }
         QQC2.Label {
             Kirigami.FormData.label: S.t("Sendungsnummer")
             visible: !!detail.sendung.nummer

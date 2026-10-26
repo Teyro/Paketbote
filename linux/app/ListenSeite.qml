@@ -30,7 +30,6 @@ Kirigami.ScrollablePage {
             text: S.t("Sendung hinzufügen")
             icon.name: "list-add"
             shortcut: StandardKey.New
-            enabled: seite.ha.eingerichtet
             onTriggered: seite.hinzufuegen()
         },
         Kirigami.Action {
@@ -55,17 +54,25 @@ Kirigami.ScrollablePage {
     ]
 
     header: QQC2.Control {
-        visible: !seite.ha.eingerichtet || seite.ha.fehler !== ""
+        visible: !seite.ha.bereit || seite.ha.fehler !== ""
         padding: Kirigami.Units.smallSpacing
         contentItem: Kirigami.InlineMessage {
             visible: true
-            type: seite.ha.eingerichtet ? Kirigami.MessageType.Error : Kirigami.MessageType.Information
-            text: seite.ha.eingerichtet ? seite.ha.fehler
-                  : S.t("Paketbote zeigt die Sendungen der Home-Assistant-Integration „Briefankündigung“ (HACS). Adresse und Token eintragen.")
-            actions: Kirigami.Action {
-                text: seite.ha.eingerichtet ? S.t("Neu laden") : S.t("Einrichten …")
-                onTriggered: seite.ha.eingerichtet ? seite.ha.laden() : seite.einstellungen()
-            }
+            type: seite.ha.bereit ? Kirigami.MessageType.Error : Kirigami.MessageType.Information
+            text: seite.ha.bereit ? seite.ha.fehler
+                  : S.t("Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen auch die Pakete aus deinen Versandmails dazu.")
+            actions: [
+                Kirigami.Action {
+                    visible: !seite.ha.bereit
+                    text: S.t("Sendung hinzufügen")
+                    icon.name: "list-add"
+                    onTriggered: seite.hinzufuegen()
+                },
+                Kirigami.Action {
+                    text: seite.ha.bereit ? S.t("Neu laden") : S.t("Home Assistant …")
+                    onTriggered: seite.ha.bereit ? seite.ha.laden() : seite.einstellungen()
+                }
+            ]
         }
     }
 
@@ -96,10 +103,11 @@ Kirigami.ScrollablePage {
         Kirigami.PlaceholderMessage {
             anchors.centerIn: parent
             width: parent.width - Kirigami.Units.gridUnit * 4
-            visible: seite.ha.eingerichtet && seite.ha.geladen && liste.count === 0
+            visible: seite.ha.bereit && seite.ha.geladen && liste.count === 0
             icon.name: "package-x-generic"
             text: S.t("Keine Pakete unterwegs")
-            explanation: S.t("Versandmails von DHL, Hermes, DPD, GLS, UPS und Amazon erscheinen hier – oder eine Sendung mit ＋ hinzufügen.")
+            explanation: seite.ha.eingerichtet ? S.t("Versandmails von DHL, Hermes, DPD, GLS, UPS und Amazon erscheinen hier – oder eine Sendung mit ＋ hinzufügen.")
+                         : S.t("Sendungsnummer mit ＋ eintragen – Paketbote holt Stand, Verlauf und Karte.")
             helpfulAction: Kirigami.Action {
                 text: S.t("Sendung hinzufügen")
                 icon.name: "list-add"

@@ -5,6 +5,7 @@
  */
 import QtQuick
 import "logik.js" as Logik
+import "anbieter.js" as Anbieter
 import "sprache.js" as S
 
 QtObject {
@@ -15,7 +16,19 @@ QtObject {
     property string konto: ""
     property int minuten: 10
 
-    property var sendungen: []
+    /// Sendungen aus Home Assistant
+    property var haSendungen: []
+    /// Direkt verfolgte Sendungen (der Besitzer speichert sie bei direktGeaendert)
+    property var direkt: []
+    /// Schlüssel der Anbieter: {dhl, upsId, upsGeheim, siebzehn, ship24, oeffentlich}
+    property var schluessel: ({})
+    /// Direkt hinzugefügte auch in Home Assistant eintragen
+    property bool auchInHA: true
+    /// Alle Sendungen (gleiche Nummer nur einmal)
+    readonly property var sendungen: Logik.zusammenfuehren(haSendungen, direkt)
+    /// Fehler der Anbieter bei der letzten direkten Abfrage
+    property var anbieterFehler: ({})
+    property var bekannt: ({})
     property var konten: []
     property int version: 0
     property string fehler: ""
@@ -27,9 +40,12 @@ QtObject {
     readonly property string basis: Logik.adresse(adresse)
     readonly property bool eingerichtet: basis !== "" && token.trim() !== ""
     readonly property bool mehrereKonten: konten.length > 1
+    /// Überhaupt etwas zu zeigen (Home Assistant oder direkt verfolgt)
+    readonly property bool bereit: eingerichtet || direkt.length > 0
 
     signal neuerStand(var titel, var text, var id)
     signal meldung(string text)
+    signal direktGeaendert(var liste)
 
     onBasisChanged: neuVerbinden()
     onTokenChanged: neuVerbinden()
@@ -37,9 +53,47 @@ QtObject {
 
     function neuVerbinden() {
         abgelehnt = false;
-        sendungen = [];
-        geladen = false;
+        haSendungen = [];
+        geladen = !eingerichtet;
         verzoegert.restart();
+    }
+
+    /// Mitteilungen: Stand jeder Sendung mit dem zuletzt gesehenen vergleichen
+    function pruefeMitteilungen() {
+        var erstes = Object.keys(bekannt).length === 0;
+        var neu = {};
+        sendungen.forEach(function (s) {
+            neu[s.id] = s;
+            var m = erstes ? null : Logik.mitteilung(bekannt[s.id], s);
+            if (m) neuerStand(m.titel, m.text, s.id);
+        });
+        bekannt = neu;
+    }
+
+    function direktSetzen(liste) {
+        direkt = liste;
+        direktGeaendert(liste);
+    }
+
+    /// Direkt verfolgte Sendungen bei den Anbietern abfragen (offene, und zugestellte bis eine Stunde danach)
+    function direktAktualisieren() {
+        var offen = direkt.filter(function (s) { return !Logik.fertig(s) || Date.now() - s.datum < 3600000; });
+        offen.forEach(function (s) { einmalAbfragen(s); });
+    }
+
+    function einmalAbfragen(s) {
+        if (!s.nummer) return;
+        Anbieter.abfragen(schluessel, s.nummer, s.dienst).then(function (r) {
+            var f = r.fehler;
+            if (!r.spur && Anbieter.namen(schluessel, s.dienst).length === 0) f = { "–": S.t("Kein Anbieter für %1 eingerichtet.", s.dienstName) };
+            anbieterFehler = f;
+            if (!r.spur) return;
+            var liste = direkt.slice(), i = liste.findIndex(function (x) { return x.nummer === s.nummer; });
+            if (i < 0) liste.unshift(Anbieter.uebernehmen(Anbieter.neu(s.nummer, s.dienst, s.name, false), r.spur, r.quelle));
+            else liste[i] = Anbieter.uebernehmen(liste[i], r.spur, r.quelle);
+            direktSetzen(liste);
+            pruefeMitteilungen();
+        });
     }
 
     function fehlerText(status) {
@@ -70,6 +124,7 @@ QtObject {
     }
 
     function laden() {
+        direktAktualisieren();
         if (!eingerichtet || abgelehnt) return;
         laedt = true;
         anfrage("GET", "/api/briefankuendigung/briefe", null, function (j, text) {
@@ -77,41 +132,52 @@ QtObject {
             if (text || !j) { fehler = text || S.t("Unerwartete Antwort von Home Assistant."); return; }
             var k = konto.trim().toLowerCase();
             var neu = Logik.sendungenAus(j).filter(function (s) { return !k || s.kontoId.toLowerCase() === k || s.kontoName.toLowerCase() === k; });
-            if (geladen) {
-                var alt = {};
-                sendungen.forEach(function (s) { alt[s.id] = s; });
-                neu.forEach(function (s) {
-                    var m = Logik.mitteilung(alt[s.id], s);
-                    if (m) neuerStand(m.titel, m.text, s.id);
-                });
-            }
             konten = j.konten || [];
             version = j.version || 1;
-            sendungen = neu;
+            haSendungen = neu;
             fehler = "";
             geladen = true;
+            pruefeMitteilungen();
         });
     }
 
+    /// Sendung verfolgen: direkt (auf diesem Rechner) und – wenn eingerichtet – auch in Home Assistant.
     /// fertig(fehlertext) – "" bei Erfolg
-    function hinzufuegen(nummer, dienst, name, fertig) {
+    function hinzufuegen(nummer, dienst, name, fertig, ruecksendung) {
+        var s = Anbieter.neu(nummer, dienst, name, ruecksendung);
+        if (!direkt.some(function (x) { return x.nummer === s.nummer; })) direktSetzen([s].concat(direkt));
+        einmalAbfragen(s);
+        if (!eingerichtet || !auchInHA) { fertig(""); return; }
         anfrage("POST", "/api/briefankuendigung/sendung", { nummer: nummer, dienst: dienst, name: name, konto: konto }, function (j, text) {
             if (!text) laden();
             fertig(text);
         });
     }
 
+    function sendung(id) { return sendungen.find(function (s) { return s.id === id; }) || null; }
+
     function umbenennen(id, name) {
-        anfrage("POST", "/api/briefankuendigung/sendung/name", { id: id, name: name }, function (j, text) { if (text) meldung(text); laden(); });
+        var s = sendung(id);
+        direktSetzen(direkt.map(function (x) { return x.id === id || (s && x.nummer === s.nummer) ? Object.assign({}, x, { name: name }) : x; }));
+        if (s && s.quelle !== "direkt")
+            anfrage("POST", "/api/briefankuendigung/sendung/name", { id: id, name: name }, function (j, text) { if (text) meldung(text); laden(); });
     }
 
     function entfernen(id) {
-        sendungen = sendungen.filter(function (s) { return s.id !== id || !s.manuell; });
-        anfrage("POST", "/api/briefankuendigung/sendung/entfernen", { id: id }, function (j, text) { if (text) meldung(text); laden(); });
+        var s = sendung(id);
+        direktSetzen(direkt.filter(function (x) { return x.id !== id && !(s && s.nummer && x.nummer === s.nummer); }));
+        haSendungen = haSendungen.filter(function (x) { return x.id !== id || !x.manuell; });
+        if (s && s.quelle !== "direkt")
+            anfrage("POST", "/api/briefankuendigung/sendung/entfernen", { id: id }, function (j, text) { if (text) meldung(text); laden(); });
     }
 
     function erledigt(id, ja) {
-        sendungen = sendungen.map(function (s) { return s.id === id ? Object.assign({}, s, { erledigt: ja }) : s; });
+        var s = sendung(id);
+        if (s && s.quelle === "direkt") {
+            direktSetzen(direkt.map(function (x) { return x.id === id ? Object.assign({}, x, { erledigt: ja }) : x; }));
+            return;
+        }
+        haSendungen = haSendungen.map(function (x) { return x.id === id ? Object.assign({}, x, { erledigt: ja }) : x; });
         anfrage("POST", "/api/briefankuendigung/erledigt", { id: id, erledigt: ja }, function (j, text) { if (text) meldung(text); laden(); });
     }
 
@@ -124,7 +190,7 @@ QtObject {
     }
 
     property Timer verzoegert: Timer { interval: 500; onTriggered: ha.laden() }
-    property Timer regelmaessig: Timer { interval: Math.max(1, ha.minuten) * 60000; running: ha.eingerichtet; repeat: true; onTriggered: ha.laden() }
+    property Timer regelmaessig: Timer { interval: Math.max(1, ha.minuten) * 60000; running: ha.bereit; repeat: true; onTriggered: ha.laden() }
     property Timer nachladen: Timer {
         property int zaehler: 0
         interval: 5000; repeat: true

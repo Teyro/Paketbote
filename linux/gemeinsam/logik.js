@@ -55,7 +55,7 @@ function sendungenAus(antwort) {
             dienst: b.dienst || "dhl", dienstName: b.dienst_name || dienst(b.dienst || "dhl").name, stand: b.stand || "unterwegs",
             erwartet: b.erwartet || "", zeitfenster: b.zeitfenster || "", kundenkonto: b.kundenkonto || "", verfolgen: b.verfolgen || "",
             manuell: !!b.manuell, statusText: b.status_text || "", problem: !!b.problem, erledigt: !!b.erledigt,
-            kontoId: b.konto || "", kontoName: b.konto_name || "",
+            kontoId: b.konto || "", kontoName: b.konto_name || "", anbieter: b.anbieter || "", quelle: "ha", ruecksendung: !!b.ruecksendung,
             ereignisse: (b.ereignisse || []).filter(function (e) { return e && e.text; })
                 .map(function (e) { return { zeit: e.zeit ? Date.parse(e.zeit) || 0 : 0, text: e.text, ort: e.ort || "" }; })
         };
@@ -169,4 +169,22 @@ function standArt(s, jetzt) {
     if (s.problem) return "problem";
     if (s.stand === "abholbereit") return "abholbereit";
     return kommtHeute(s, jetzt) ? "heute" : "";
+}
+
+/** Sendungen aus Home Assistant und direkt verfolgte zusammenführen (gleiche Nummer: Home Assistant gewinnt, Verlauf ergänzt) */
+function zusammenfuehren(ha, direkt) {
+    var erg = (ha || []).map(function (s) { return Object.assign({ quelle: "ha" }, s); });
+    (direkt || []).forEach(function (d) {
+        var i = -1;
+        for (var k = 0; k < erg.length; k++) if (d.nummer && String(erg[k].nummer).toUpperCase() === d.nummer) { i = k; break; }
+        if (i < 0) { erg.push(d); return; }
+        var h = Object.assign({}, erg[i]);
+        if (!h.ereignisse.length) h.ereignisse = d.ereignisse;
+        if (!h.erwartet) h.erwartet = d.erwartet;
+        if (!h.name) h.name = d.name;
+        h.ruecksendung = h.ruecksendung || d.ruecksendung;
+        if (!h.anbieter) h.anbieter = d.anbieter;
+        erg[i] = h;
+    });
+    return erg;
 }

@@ -1,0 +1,19 @@
+app-id: de.teyro.Paketbote
+runtime: org.kde.Platform
+runtime-version: '6.9'
+sdk: org.kde.Sdk
+command: paketbote
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --talk-name=org.freedesktop.Notifications
+modules:
+  - name: paketbote
+    buildsystem: cmake-ninja
+    subdir: linux/flatpak
+    sources:
+      - type: dir
+        path: ../..

@@ -7,6 +7,7 @@ import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import "logik.js" as Logik
+import "sprache.js" as S
 
 QQC2.ItemDelegate {
     id: zeile
@@ -28,11 +29,23 @@ QQC2.ItemDelegate {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 2
-            QQC2.Label {
+            RowLayout {
                 Layout.fillWidth: true
-                text: Logik.titel(zeile.sendung)
-                font.weight: Font.DemiBold
-                elide: Text.ElideRight
+                spacing: Kirigami.Units.smallSpacing
+                Rectangle {
+                    visible: !!zeile.sendung.ruecksendung
+                    implicitWidth: rueck.implicitWidth + Kirigami.Units.smallSpacing * 2
+                    implicitHeight: rueck.implicitHeight
+                    radius: height / 2
+                    color: Qt.rgba(0.6, 0.35, 0.85, 0.18)
+                    QQC2.Label { id: rueck; anchors.centerIn: parent; text: S.t("Rücksendung"); font: Kirigami.Theme.smallFont; color: "#8e44ad" }
+                }
+                QQC2.Label {
+                    Layout.fillWidth: true
+                    text: Logik.titel(zeile.sendung)
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
             }
             QQC2.Label {
                 Layout.fillWidth: true

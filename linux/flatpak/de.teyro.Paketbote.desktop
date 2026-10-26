@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Paketbote
+GenericName=Paketverfolgung
+GenericName[en]=Parcel tracking
+Comment=Sendungen von DHL, Hermes, DPD, GLS, UPS und Amazon verfolgen
+Comment[en]=Track shipments from DHL, Hermes, DPD, GLS, UPS and Amazon
+Exec=paketbote
+Icon=de.teyro.Paketbote
+Categories=Utility;Network;
+Keywords=Paket;DHL;Hermes;DPD;GLS;UPS;Amazon;Sendung;parcel;tracking;

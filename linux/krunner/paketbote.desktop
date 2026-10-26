@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Paketbote
+Comment=Sendungsnummer eintippen und verfolgen; „pakete“ zeigt, was unterwegs ist
+Comment[en]=Type a tracking number to track it; “parcels” shows what is on the way
+Icon=package-x-generic
+X-KDE-ServiceTypes=Plasma/Runner
+Type=Service
+X-KDE-PluginInfo-Author=Teyro
+X-KDE-PluginInfo-Name=paketbote
+X-KDE-PluginInfo-Version=1.1.0
+X-KDE-PluginInfo-License=GPL-3.0-or-later
+X-KDE-PluginInfo-EnabledByDefault=true
+X-Plasma-API=DBus
+X-Plasma-DBusRunner-Service=de.teyro.paketbote.runner
+X-Plasma-DBusRunner-Path=/runner

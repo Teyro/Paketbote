@@ -27,6 +27,14 @@ PlasmoidItem {
         property string token: ""
         property string konto: ""
         property int tageZugestellt: 14
+        property string direkt: "[]"
+        property string dhl: ""
+        property string upsId: ""
+        property string upsGeheim: ""
+        property string siebzehn: ""
+        property string ship24: ""
+        property bool oeffentlich: true
+        property bool auchInHA: true
     }
 
     property double jetzt: Date.now()
@@ -37,6 +45,12 @@ PlasmoidItem {
         adresse: gemeinsam.adresse
         token: gemeinsam.token
         konto: gemeinsam.konto
+        auchInHA: gemeinsam.auchInHA
+        schluessel: ({ dhl: gemeinsam.dhl, upsId: gemeinsam.upsId, upsGeheim: gemeinsam.upsGeheim,
+                       siebzehn: gemeinsam.siebzehn, ship24: gemeinsam.ship24, oeffentlich: gemeinsam.oeffentlich })
+        direkt: { try { return JSON.parse(gemeinsam.direkt); } catch (e) { return []; } }
+        onDirektGeaendert: (liste) => gemeinsam.direkt = JSON.stringify(liste)
+        Component.onCompleted: laden()
         onNeuerStand: (titel, text, id) => { if (Plasmoid.configuration.mitteilungen) root.melden(titel, text); }
     }
 
@@ -101,7 +115,7 @@ PlasmoidItem {
     Plasmoid.icon: "package-x-generic"
     Plasmoid.status: gruppen.aktiv.length ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus
     toolTipMainText: Logik.kopfTitel(gruppen.aktiv)
-    toolTipSubText: !verbindung.eingerichtet ? S.t("Noch nicht eingerichtet.") : verbindung.fehler ? verbindung.fehler
+    toolTipSubText: !verbindung.bereit ? S.t("Noch nicht eingerichtet.") : verbindung.fehler ? verbindung.fehler
                     : gruppen.aktiv.slice(0, 5).map(function (s) { return Logik.titel(s) + " – " + Logik.standText(s, root.jetzt); }).join("\n")
 
     switchWidth: Kirigami.Units.gridUnit * 12
@@ -161,7 +175,6 @@ PlasmoidItem {
                 }
                 PC3.ToolButton {
                     icon.name: "list-add"
-                    enabled: verbindung.eingerichtet
                     onClicked: stapel.push(hinzufuegenSeite)
                     PC3.ToolTip { text: S.t("Sendung hinzufügen") }
                 }
@@ -186,14 +199,14 @@ PlasmoidItem {
                 Kirigami.InlineMessage {
                     Layout.fillWidth: true
                     Layout.margins: Kirigami.Units.smallSpacing
-                    visible: !verbindung.eingerichtet || verbindung.fehler !== "" || updater.neu !== ""
-                    type: !verbindung.eingerichtet || updater.neu ? Kirigami.MessageType.Information : Kirigami.MessageType.Error
-                    text: !verbindung.eingerichtet ? S.t("Paketbote zeigt die Sendungen der Home-Assistant-Integration „Briefankündigung“ (HACS). Adresse und Token eintragen.")
+                    visible: !verbindung.bereit || verbindung.fehler !== "" || updater.neu !== ""
+                    type: !verbindung.bereit || updater.neu ? Kirigami.MessageType.Information : Kirigami.MessageType.Error
+                    text: !verbindung.bereit ? S.t("Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen auch die Pakete aus deinen Versandmails dazu.")
                           : verbindung.fehler ? verbindung.fehler : updater.fehler || S.t("Version %1 ist da", updater.neu)
                     actions: Kirigami.Action {
-                        text: !verbindung.eingerichtet ? S.t("Einrichten …") : verbindung.fehler ? S.t("Neu laden") : S.t("Aktualisieren")
+                        text: !verbindung.bereit ? S.t("Home Assistant …") : verbindung.fehler ? S.t("Neu laden") : S.t("Aktualisieren")
                         enabled: !updater.laeuft
-                        onTriggered: !verbindung.eingerichtet ? Plasmoid.internalAction("configure").trigger()
+                        onTriggered: !verbindung.bereit ? Plasmoid.internalAction("configure").trigger()
                                      : verbindung.fehler ? verbindung.laden() : updater.installieren()
                     }
                 }
@@ -241,6 +254,7 @@ PlasmoidItem {
                 property string sendungId: ""
                 readonly property var sendung: verbindung.sendungen.find(function (s) { return s.id === sendungId; }) || null
                 readonly property string titel: sendung ? Logik.titel(sendung) : ""
+                onSendungIdChanged: { var s = verbindung.sendung(sendungId); if (s && (s.quelle === "direkt" || !s.ereignisse.length)) verbindung.einmalAbfragen(s); }
                 contentWidth: availableWidth
                 ColumnLayout {
                     width: parent.width
@@ -252,6 +266,7 @@ PlasmoidItem {
                         sendung: dseite.sendung || { ereignisse: [], dienst: "dhl" }
                         jetzt: root.jetzt
                         mitKonto: verbindung.mehrereKonten
+                        anbieterFehler: verbindung.anbieterFehler
                     }
                     RowLayout {
                         Layout.margins: Kirigami.Units.largeSpacing

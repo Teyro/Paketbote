@@ -43,6 +43,21 @@ Keywords=Paket;DHL;Hermes;DPD;GLS;UPS;Amazon;Sendung;parcel;tracking;
 StartupWMClass=qml
 DESKTOP
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$ANW" 2>/dev/null || true
+# KRunner: Sendungsnummer eintippen → verfolgen; „pakete“ → was unterwegs ist (braucht python3-dbus und python3-gi)
+if command -v python3 >/dev/null 2>&1; then
+  mkdir -p "$ZIEL/krunner" "${XDG_DATA_HOME:-$HOME/.local/share}/krunner/dbusplugins" "${XDG_DATA_HOME:-$HOME/.local/share}/dbus-1/services"
+  cp "$HIER/krunner/paketbote-runner.py" "$ZIEL/krunner/"
+  cp "$HIER/krunner/paketbote.desktop" "${XDG_DATA_HOME:-$HOME/.local/share}/krunner/dbusplugins/paketbote.desktop"
+  printf '[D-BUS Service]\nName=de.teyro.paketbote.runner\nExec=%s %s\n' "$(command -v python3)" "$ZIEL/krunner/paketbote-runner.py" \
+    > "${XDG_DATA_HOME:-$HOME/.local/share}/dbus-1/services/de.teyro.paketbote.runner.service"
+  python3 -c "import dbus, gi" 2>/dev/null || echo "Hinweis: Für KRunner python3-dbus und python3-gi installieren."
+  # laufenden Runner neu starten, damit die neue Version gilt
+  pkill -f paketbote-runner.py 2>/dev/null || true
+fi
+
+# Benachrichtigungen (KDE)
+mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/knotifications6"
+cp "$HIER/paketbote.notifyrc" "${XDG_DATA_HOME:-$HOME/.local/share}/knotifications6/paketbote.notifyrc"
 echo "App installiert: Startmenü → Paketbote"
 
 # Plasma-Widget

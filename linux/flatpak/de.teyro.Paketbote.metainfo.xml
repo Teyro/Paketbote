@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>de.teyro.Paketbote</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Paketbote</name>
+  <summary>Track parcels from DHL, Hermes, DPD, GLS, UPS and Amazon</summary>
+  <summary xml:lang="de">Pakete von DHL, Hermes, DPD, GLS, UPS und Amazon verfolgen</summary>
+  <description>
+    <p>Enter a tracking number and Paketbote fetches status, history and a map – with several providers in turn
+       (DHL, UPS, 17TRACK, Ship24, public pages), so one can step in for another. Optionally connects to Home Assistant
+       (integration “Briefankündigung”) to also show the parcels from your shipping mails.</p>
+  </description>
+  <launchable type="desktop-id">de.teyro.Paketbote.desktop</launchable>
+  <url type="homepage">https://github.com/Teyro/Paketbote</url>
+  <developer id="de.teyro"><name>Teyro</name></developer>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.1.0" date="2026-10-26"/>
+    <release version="1.0.0" date="2026-10-26"/>
+  </releases>
+</component>

@@ -66,7 +66,6 @@
 "Durchschnittliche Laufzeit" = "Durchschnittliche Laufzeit";
 "Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen auch die Pakete aus deinen Versandmails dazu." = "Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen auch die Pakete aus deinen Versandmails dazu.";
 "Einfügen" = "Einfügen";
-"Einrichten …" = "Einrichten …";
 "Einstellungen" = "Einstellungen";
 "Einstellungen …" = "Einstellungen …";
 "Entfernen" = "Entfernen";
@@ -95,7 +94,6 @@
 "Home Assistant" = "Home Assistant";
 "Home Assistant …" = "Home Assistant …";
 "Home Assistant ist nicht erreichbar (%1)." = "Home Assistant ist nicht erreichbar (%1).";
-"Home Assistant verfolgt die Sendung ab jetzt mit – Mails zur selben Nummer ergänzen sie." = "Home Assistant verfolgt die Sendung ab jetzt mit – Mails zur selben Nummer ergänzen sie.";
 "Ich verfolge jetzt %1." = "Ich verfolge jetzt %1.";
 "in Zustellung" = "in Zustellung";
 "Integration „Briefankündigung“ (HACS)" = "Integration „Briefankündigung“ (HACS)";
@@ -132,7 +130,6 @@
 "Neu laden" = "Neu laden";
 "nicht erreichbar" = "nicht erreichbar";
 "Noch keine Stationen bekannt." = "Noch keine Stationen bekannt.";
-"Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder in Home Assistant einen 17TRACK- bzw. DHL-Schlüssel eintragen." = "Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder in Home Assistant einen 17TRACK- bzw. DHL-Schlüssel eintragen.";
 "Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder unter Einstellungen → Direkt verfolgen einen Anbieter eintragen." = "Noch keine Stationen bekannt. Den genauen Verlauf zeigt die Seite des Dienstes – oder unter Einstellungen → Direkt verfolgen einen Anbieter eintragen.";
 "Noch nicht eingerichtet." = "Noch nicht eingerichtet.";
 "Notiz und Foto" = "Notiz und Foto";
@@ -148,10 +145,10 @@
 "Paketbote auf dem iPhone öffnen." = "Paketbote auf dem iPhone öffnen.";
 "Paketbote auf GitHub" = "Paketbote auf GitHub";
 "Paketbote einrichten" = "Paketbote einrichten";
+"Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein." = "Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein.";
 "Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein. Die Schlüssel bleiben im Schlüsselbund dieses Geräts." = "Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein. Die Schlüssel bleiben im Schlüsselbund dieses Geräts.";
 "Paketbote fragt selbst bei den Anbietern nach – auch ohne Home Assistant." = "Paketbote fragt selbst bei den Anbietern nach – auch ohne Home Assistant.";
 "Paketbote fragt selbst bei den Anbietern nach und trägt die Sendung auch in Home Assistant ein." = "Paketbote fragt selbst bei den Anbietern nach und trägt die Sendung auch in Home Assistant ein.";
-"Paketbote zeigt die Sendungen der Home-Assistant-Integration „Briefankündigung“ (HACS). Adresse und Token eintragen." = "Paketbote zeigt die Sendungen der Home-Assistant-Integration „Briefankündigung“ (HACS). Adresse und Token eintragen.";
 "Paketdienst" = "Paketdienst";
 "Paketdienste" = "Paketdienste";
 "Pakete" = "Pakete";
@@ -169,6 +166,7 @@
 "Sendung hinzufügen …" = "Sendung hinzufügen …";
 "Sendungs- oder Bestellnummer" = "Sendungs- oder Bestellnummer";
 "Sendungsnummer" = "Sendungsnummer";
+"Sendungsnummer mit ＋ eintragen – Paketbote holt Stand, Verlauf und Karte." = "Sendungsnummer mit ＋ eintragen – Paketbote holt Stand, Verlauf und Karte.";
 "Sendungsnummer mit ＋ eintragen oder den Paketschein scannen – Paketbote holt Stand, Verlauf und Karte." = "Sendungsnummer mit ＋ eintragen oder den Paketschein scannen – Paketbote holt Stand, Verlauf und Karte.";
 "Sendungsnummer oder Paketdienst nicht erkannt." = "Sendungsnummer oder Paketdienst nicht erkannt.";
 "Sendungsverfolgung in Home Assistant" = "Sendungsverfolgung in Home Assistant";

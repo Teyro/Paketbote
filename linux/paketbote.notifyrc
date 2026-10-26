@@ -1,0 +1,11 @@
+[Global]
+IconName=package-x-generic
+Comment=Paketbote
+Name=Paketbote
+
+[Event/neuerStand]
+Name=Neuer Stand einer Sendung
+Name[en]=New shipment status
+Comment=Kommt heute, zur Abholung bereit, zugestellt oder ein Problem
+Comment[en]=Arriving today, ready for pickup, delivered or a problem
+Action=Popup
