@@ -76,7 +76,7 @@ struct WidgetZeile: View {
         HStack(spacing: 9) {
             DienstLogo(dienst: sendung.dienst, groesse: logo)
             VStack(alignment: .leading, spacing: 1) {
-                Text(sendung.titel).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Text(sendung.titel).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary).lineLimit(1)
                 Text(Texte.zeile(sendung, jetzt: jetzt))
                     .font(.system(size: 11))
                     .foregroundStyle(standFarbe(sendung))
