@@ -1,6 +1,6 @@
 # Paketbote
 
-**Paketverfolgung für iPhone, iPad, Mac und Linux – DHL, Hermes, DPD, GLS, UPS und Amazon.**
+**Paketverfolgung für iPhone, iPad, Apple Watch, Mac und Linux – DHL, Hermes, DPD, GLS, UPS und Amazon.**
 Wie die App *Parcel*, nur ohne fremden Server: Die Zentrale ist dein Home Assistant mit der Integration
 [Briefankündigung](https://github.com/Teyro/Briefankuendigung-HA) (ab 1.5). Sie liest die Versandmails der
 Dienste, fragt auf Wunsch DHL und 17TRACK nach dem aktuellen Stand und hält alle Geräte auf demselben Stand.
@@ -20,6 +20,29 @@ Dienste, fragt auf Wunsch DHL und 17TRACK nach dem aktuellen Stand und hält all
 - **Widgets:** iPhone (Home- und Sperrbildschirm), Mac (Schreibtisch), Plasma (Panel und Kachel)
 - **Siri & Kurzbefehle:** „Welche Pakete kommen heute mit Paketbote?“, „Sendung mit Paketbote verfolgen“
 - Deutsch und Englisch, hell und dunkel, Updates (Mac und Linux mit einem Klick)
+
+## Neu in 1.2: Direkt verfolgen – auch ohne Home Assistant
+
+Sendungsnummer eintippen, einfügen oder den Paketschein **scannen** – Paketbote holt Stand, Verlauf und Karte selbst.
+Mehrere Anbieter werden der Reihe nach gefragt; antwortet einer nicht, springt der nächste ein. In den Einstellungen
+lässt sich jeder einzeln an- und abschalten:
+
+| Anbieter | Dienste | Schlüssel |
+|---|---|---|
+| DHL (offiziell) | DHL, Deutsche Post | kostenlos (developer.dhl.com) |
+| **DHL ohne Schlüssel** | DHL, Deutsche Post | keiner – dhl.de, ersatzweise deutschepost.de |
+| UPS (offiziell) | UPS | kostenlos (developer.ups.com) |
+| 17TRACK | fast alle | 200 Sendungen frei |
+| Ship24 | fast alle | Schlüssel |
+| GLS, DPD öffentlich | GLS, DPD | keiner (inoffiziell, kann ausfallen) |
+
+Sendungen aus Home Assistant ohne Verlauf verfolgt die App automatisch mit. Dazu: **Live-Aktivität** und Dynamic Island,
+**Teilen-Menü** („Teilen → Paketbote“ aus Mail oder Safari), **Statistik**, **Notiz und Foto** je Sendung,
+**Rücksendungen**, **Apple Watch** (eigene IPA), auf dem Mac **Ziehen & Ablegen**, **⌥⌘P** von überall und **Drucken**,
+unter Linux **KRunner** („pb 0034…“), **Karte**, **Mitteilungen** und **Flatpak**.
+
+**Widgets auf dem iPhone mit Signulous:** Signulous übernimmt die App-Gruppe nicht. Deshalb das Widget lange drücken →
+„Widget bearbeiten“ → Home-Assistant-Adresse und Token eintragen; dann lädt es selbst.
 
 ## Bestandteile
 
@@ -49,6 +72,10 @@ Neue Versionen zeigt die App oben als Hinweis.
 
 **Mac:** `Paketbote-macOS-x.y.z.zip` laden, `Paketbote.app` in „Programme“ ziehen. Beim ersten Start mit
 Rechtsklick → Öffnen (die App ist nicht notariell beglaubigt). Updates: Menü *Paketbote → Nach Updates suchen*.
+
+**Apple Watch:** statt der normalen IPA `Paketbote-iOS-mit-Uhr-x.y.z.ipa` installieren.
+
+**Linux (Flatpak):** `Paketbote-x.y.z.flatpak` laden und `flatpak install --user Paketbote-x.y.z.flatpak` (Einstellungen getrennt vom Plasma-Widget).
 
 **Linux:** `paketbote-linux-x.y.z.tar.gz` entpacken und `sh paketbote/installieren.sh` ausführen (ohne Root).
 Danach steht *Paketbote* im Startmenü und – unter Plasma 6 – in der Widget-Auswahl. Braucht Qt 6 und Kirigami

@@ -21,6 +21,19 @@ mails, optionally asks DHL and 17TRACK for the live status, and keeps all your d
 - **Siri & Shortcuts:** “Which parcels arrive today with Paketbote?”, “Track a shipment with Paketbote”
 - German and English, light and dark, updates (one click on Mac and Linux)
 
+## New in 1.2: track directly – even without Home Assistant
+
+Type, paste or **scan** a tracking number – Paketbote fetches status, history and map itself. Several providers are asked in
+turn; if one fails, the next one steps in. Each can be switched on or off in the settings: DHL (official key),
+**DHL without key** (dhl.de, fallback deutschepost.de), UPS (official), 17TRACK, Ship24, public GLS/DPD pages.
+
+Shipments from Home Assistant without history are tracked along automatically. Plus: **Live Activity** and Dynamic Island,
+**Share sheet**, **statistics**, **note and photo** per shipment, **returns**, **Apple Watch** (separate IPA), on the Mac
+**drag & drop**, **⌥⌘P** from anywhere and **printing**, on Linux **KRunner**, **map**, **notifications** and **Flatpak**.
+
+**iPhone widgets with Signulous:** Signulous drops the app group, so long-press the widget → “Edit Widget” → enter the
+Home Assistant address and token; it then loads by itself.
+
 ## Parts
 
 | | |
