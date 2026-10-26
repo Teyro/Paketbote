@@ -13,8 +13,8 @@ iconutil -c icns build/AppIcon.iconset -o ressourcen/AppIcon.icns
 command -v xcodegen >/dev/null || brew install xcodegen
 xcodegen generate --spec project.yml --quiet
 
-bauen() {  # Schema, SDK/Ziel, Log
-  xcodebuild -project Paketbote.xcodeproj -scheme "$1" -configuration Release -derivedDataPath build/dd $2 \
+bauen() {  # Schema, SDK/Ziel, Log, weitere Einstellungen
+  xcodebuild -project Paketbote.xcodeproj -scheme "$1" -configuration Release -derivedDataPath build/dd $2 ${4:-} \
     MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$NUMMER" -skipPackagePluginValidation build 2>&1 | tee "build/$3.log" \
     | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
   grep -q "BUILD SUCCEEDED" "build/$3.log" || { grep -B2 -A6 "error:" "build/$3.log" | head -80; exit 1; }
@@ -26,10 +26,14 @@ cp -R build/dd/Build/Products/Release/Paketbote.app build/
 codesign --verify --deep --strict build/Paketbote.app && echo "Mac: Signatur ok"
 (cd build && ditto -c -k --sequesterRsrc --keepParent Paketbote.app "Paketbote-macOS-$VERSION.zip")
 
-# iPhone/iPad (Gerät): Payload/Paketbote.app als IPA
-bauen Paketbote-iOS "-sdk iphoneos -destination generic/platform=iOS" ios
+# iPhone/iPad (Gerät): ohne Profil bauen, dann selbst ad hoc mit den Berechtigungen (App-Gruppe) signieren –
+# Signulous signiert beim Installieren mit dem eigenen Zertifikat neu und übernimmt die Berechtigungen.
+bauen Paketbote-iOS "-sdk iphoneos -destination generic/platform=iOS" ios "CODE_SIGNING_ALLOWED=NO"
 mkdir -p build/ipa/Payload
 cp -R build/dd/Build/Products/Release-iphoneos/Paketbote.app build/ipa/Payload/
+APP=build/ipa/Payload/Paketbote.app
+codesign -f -s - --entitlements ressourcen/Widgets-iOS.entitlements "$APP/PlugIns/PaketboteWidgets.appex"
+codesign -f -s - --entitlements ressourcen/iOS.entitlements "$APP"
 echo "iPhone: Berechtigungen"; codesign -d --entitlements - build/ipa/Payload/Paketbote.app 2>/dev/null | grep -A2 application-groups || echo "  (keine)"
 (cd build/ipa && zip -qry "../Paketbote-iOS-$VERSION.ipa" Payload)
 echo "Fertig: build/Paketbote-macOS-$VERSION.zip, build/Paketbote-iOS-$VERSION.ipa"

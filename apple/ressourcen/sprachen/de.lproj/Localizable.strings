@@ -11,6 +11,7 @@
 "1 Paket" = "1 Paket";
 "17TRACK" = "17TRACK";
 "Abbrechen" = "Abbrechen";
+"Adresse" = "Adresse";
 "Adresse, z. B. http://homeassistant.local:8123" = "Adresse, z. B. http://homeassistant.local:8123";
 "Alle" = "Alle";
 "Alle Pakete …" = "Alle Pakete …";
@@ -72,6 +73,7 @@
 "Ich verfolge jetzt %1." = "Ich verfolge jetzt %1.";
 "in Zustellung" = "in Zustellung";
 "Integration „Briefankündigung“ (HACS)" = "Integration „Briefankündigung“ (HACS)";
+"Integration (HACS)" = "Integration (HACS)";
 "Keine Pakete unterwegs" = "Keine Pakete unterwegs";
 "Keine Sendung gewählt" = "Keine Sendung gewählt";
 "kommt heute" = "kommt heute";
@@ -116,7 +118,9 @@
 "Sendungsverfolgung" = "Sendungsverfolgung";
 "Sichern" = "Sichern";
 "So" = "So";
+"Stand" = "Stand";
 "Teilen" = "Teilen";
+"Token" = "Token";
 "Über" = "Über";
 "überfällig seit %1" = "überfällig seit %1";
 "Umbenennen" = "Umbenennen";
@@ -139,6 +143,7 @@
 "zugestellt" = "zugestellt";
 "Zugestellt" = "Zugestellt";
 "Zugestellte %1 Tage zeigen" = "Zugestellte %1 Tage zeigen";
+"Zugestellte zeigen (Tage)" = "Zugestellte zeigen (Tage)";
 "Zugriff verweigert – bitte den Token prüfen." = "Zugriff verweigert – bitte den Token prüfen.";
 "Zuletzt: %1" = "Zuletzt: %1";
 "zur Abholung bereit" = "zur Abholung bereit";

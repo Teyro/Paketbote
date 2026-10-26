@@ -55,7 +55,7 @@ jobs:
         timeout-minutes: 20
         run: |
           xcodebuild -project Paketbote.xcodeproj -scheme Paketbote-iOS -configuration Debug -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/sim -skipPackagePluginValidation build 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/sim -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO build 2>&1 | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
           APP=build/sim/Build/Products/Debug-iphonesimulator/Paketbote.app
           test -d "$APP"
           GERAET=$(xcrun simctl list devices available -j | node -e 'const d=JSON.parse(require("fs").readFileSync(0)).devices;const l=Object.entries(d).filter(([k])=>k.includes("iOS")).flatMap(([,v])=>v).filter(x=>/^iPhone \d+( Pro)?$/.test(x.name));console.log((l.find(x=>/Pro$/.test(x.name))||l[0]).udid)')
