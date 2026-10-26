@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#408FFF"/><stop offset="1" stop-color="#1F4DD9"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#g)"/>
+  <!-- Karton -->
+  <path d="M30 50 L62 36 L94 50 L94 88 L62 102 L30 88 Z" fill="#fff"/>
+  <path d="M30 50 L62 64 L94 50" fill="none" stroke="#1F4DD9" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M62 64 L62 102" stroke="#1F4DD9" stroke-width="4"/>
+  <path d="M46 43 L78 57 L78 70" fill="none" stroke="#C9D9FF" stroke-width="6"/>
+  <!-- Haken -->
+  <circle cx="94" cy="36" r="17" fill="#FFCC00" stroke="#1F4DD9" stroke-width="4"/>
+  <path d="M86 36 L92 42 L102 31" fill="none" stroke="#1F3380" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

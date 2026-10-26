@@ -11,6 +11,32 @@ permissions:
   contents: write
 
 jobs:
+  linux:
+    name: Linux (App und Plasma-Widget)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Übersetzungen und Logik prüfen
+        run: |
+          node werkzeuge/texte.mjs --streng
+          node werkzeuge/baue-uebersetzungen.mjs
+          git diff --exit-code -- linux/gemeinsam/uebersetzung.js || { echo "uebersetzung.js ist nicht aktuell – node werkzeuge/baue-uebersetzungen.mjs"; exit 1; }
+          node linux/test/logik-test.mjs
+          sh -n linux/installieren.sh
+      - name: Paket bauen
+        run: |
+          VERSION=$(cat apple/VERSION)
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF#refs/tags/v}"; fi
+          sed -i "s/\"Version\": \"[0-9.]*\"/\"Version\": \"$VERSION\"/" linux/plasmoid/package/metadata.json
+          sed -i "s/text: \"[0-9.]*\" }/text: \"$VERSION\" }/" linux/app/EinstellungenSeite.qml
+          mkdir -p dateien
+          tar czf "dateien/paketbote-linux-$VERSION.tar.gz" --exclude=test --transform 's,^linux,paketbote,' linux
+          tar tzf "dateien/paketbote-linux-$VERSION.tar.gz" | head -30
+      - uses: actions/upload-artifact@v5
+        with:
+          name: linux
+          path: dateien
+
   apple:
     name: iPhone und Mac
     runs-on: macos-26
@@ -91,12 +117,16 @@ jobs:
   release:
     name: Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [apple]
+    needs: [apple, linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v5
         with:
           name: apps
+          path: dateien
+      - uses: actions/download-artifact@v5
+        with:
+          name: linux
           path: dateien
       - name: Dateien an das Release hängen
         env:

@@ -13,8 +13,10 @@
 "Abbrechen" = "Abbrechen";
 "Adresse" = "Adresse";
 "Adresse, z. B. http://homeassistant.local:8123" = "Adresse, z. B. http://homeassistant.local:8123";
+"Aktualisieren" = "Aktualisieren";
 "Alle" = "Alle";
 "Alle Pakete …" = "Alle Pakete …";
+"Allgemein" = "Allgemein";
 "an" = "an";
 "an – noch %1 Sendungen frei" = "an – noch %1 Sendungen frei";
 "angekommen" = "angekommen";
@@ -88,6 +90,7 @@
 "Mit Home Assistant verbinden" = "Mit Home Assistant verbinden";
 "Mitteilungen bei neuem Stand" = "Mitteilungen bei neuem Stand";
 "Mo" = "Mo";
+"Nach Updates suchen" = "Nach Updates suchen";
 "Nach Updates suchen …" = "Nach Updates suchen …";
 "Name" = "Name";
 "Name, z. B. „Neue Schuhe“ (optional)" = "Name, z. B. „Neue Schuhe“ (optional)";
@@ -129,6 +132,8 @@
 "unterwegs" = "unterwegs";
 "Unterwegs" = "Unterwegs";
 "Update auf %1 installieren …" = "Update auf %1 installieren …";
+"Update fehlgeschlagen" = "Update fehlgeschlagen";
+"Update installiert – Plasma lädt das Widget beim nächsten Start neu." = "Update installiert – Plasma lädt das Widget beim nächsten Start neu.";
 "Verbindung prüfen" = "Verbindung prüfen";
 "Verbunden – %1 Postfächer, %2 unterwegs." = "Verbunden – %1 Postfächer, %2 unterwegs.";
 "Verlauf" = "Verlauf";

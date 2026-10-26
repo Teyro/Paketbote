@@ -13,8 +13,10 @@
 "Abbrechen" = "Cancel";
 "Adresse" = "Address";
 "Adresse, z. B. http://homeassistant.local:8123" = "Address, e.g. http://homeassistant.local:8123";
+"Aktualisieren" = "Update";
 "Alle" = "All";
 "Alle Pakete …" = "All parcels …";
+"Allgemein" = "General";
 "an" = "on";
 "an – noch %1 Sendungen frei" = "on – %1 shipments left";
 "angekommen" = "arrived";
@@ -88,6 +90,7 @@
 "Mit Home Assistant verbinden" = "Connect to Home Assistant";
 "Mitteilungen bei neuem Stand" = "Notify on status changes";
 "Mo" = "Mon";
+"Nach Updates suchen" = "Check for updates";
 "Nach Updates suchen …" = "Check for updates …";
 "Name" = "Name";
 "Name, z. B. „Neue Schuhe“ (optional)" = "Name, e.g. “New shoes” (optional)";
@@ -129,6 +132,8 @@
 "unterwegs" = "on the way";
 "Unterwegs" = "On the way";
 "Update auf %1 installieren …" = "Install update to %1 …";
+"Update fehlgeschlagen" = "Update failed";
+"Update installiert – Plasma lädt das Widget beim nächsten Start neu." = "Update installed – Plasma loads the new widget on its next start.";
 "Verbindung prüfen" = "Test connection";
 "Verbunden – %1 Postfächer, %2 unterwegs." = "Connected – %1 mailboxes, %2 on the way.";
 "Verlauf" = "History";
