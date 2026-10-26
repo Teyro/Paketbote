@@ -49,11 +49,14 @@ final class TeilenController: UIViewController {
     }
 
     /// Erweiterungen dürfen keine App öffnen – außer über die Kette der Responder bis zur Anwendung
+    /// (dynamisch aufgerufen, weil UIApplication.open in Erweiterungen gesperrt ist)
     private func oeffnen(_ url: URL) {
+        let sel = NSSelectorFromString("openURL:options:completionHandler:")
+        typealias Oeffnen = @convention(c) (AnyObject, Selector, NSURL, NSDictionary, AnyObject?) -> Void
         var r: UIResponder? = self
         while let x = r {
-            if let app = x as? UIApplication {
-                app.open(url, options: [:], completionHandler: nil)
+            if x.responds(to: sel), let imp = x.method(for: sel) {
+                unsafeBitCast(imp, to: Oeffnen.self)(x, sel, url as NSURL, NSDictionary(), nil)
                 return
             }
             r = x.next

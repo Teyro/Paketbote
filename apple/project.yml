@@ -89,8 +89,6 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: de.teyro.paketbote.teilen
         INFOPLIST_FILE: ressourcen/Teilen.plist
         GENERATE_INFOPLIST_FILE: NO
-        # öffnet die App über die Responder-Kette (sonst für Erweiterungen gesperrt)
-        APPLICATION_EXTENSION_API_ONLY: NO
         TARGETED_DEVICE_FAMILY: "1,2"
         SKIP_INSTALL: YES
   Paketbote-Uhr:
