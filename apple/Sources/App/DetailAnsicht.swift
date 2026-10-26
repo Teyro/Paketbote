@@ -269,14 +269,18 @@ enum Orte {
     static func koordinate(_ ort: String) async -> CLLocationCoordinate2D? {
         if let k = gemerkt[ort] { return k }
         let d = UserDefaults.standard
-        if let a = d.array(forKey: "ort." + ort) as? [Double], a.count == 2 {
+        if let a = d.array(forKey: "ort2." + ort) as? [Double], a.count == 2 {
             let k = CLLocationCoordinate2D(latitude: a[0], longitude: a[1])
             gemerkt[ort] = k
             return k
         }
-        guard let ergebnis = try? await CLGeocoder().geocodeAddressString(ort), let k = ergebnis.first?.location?.coordinate else { return nil }
+        // Mitteleuropa bevorzugen („Hamburg“ ist sonst womöglich Hamburg in New York)
+        let europa = CLCircularRegion(center: CLLocationCoordinate2D(latitude: 50.5, longitude: 10.5), radius: 1_200_000, identifier: "europa")
+        guard let ergebnis = try? await CLGeocoder().geocodeAddressString(ort, in: europa) else { return nil }
+        let nah = ergebnis.first { p in p.location.map { europa.contains($0.coordinate) } ?? false }
+        guard let k = (nah ?? ergebnis.first)?.location?.coordinate else { return nil }
         gemerkt[ort] = k
-        d.set([k.latitude, k.longitude], forKey: "ort." + ort)
+        d.set([k.latitude, k.longitude], forKey: "ort2." + ort)
         return k
     }
 }

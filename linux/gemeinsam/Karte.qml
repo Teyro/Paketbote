@@ -37,7 +37,7 @@ Map {
             }
             if (gemerkt[ort]) return fertig(gemerkt[ort]);
             var x = new XMLHttpRequest();
-            x.open("GET", "https://photon.komoot.io/api/?limit=1&lang=de&q=" + encodeURIComponent(ort));
+            x.open("GET", "https://photon.komoot.io/api/?limit=1&lang=de&lat=50.5&lon=10.5&q=" + encodeURIComponent(ort));
             x.onreadystatechange = function () {
                 if (x.readyState !== XMLHttpRequest.DONE) return;
                 try {
