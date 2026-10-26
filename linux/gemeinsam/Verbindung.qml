@@ -77,6 +77,14 @@ QtObject {
 
     /// Direkt verfolgte Sendungen bei den Anbietern abfragen (offene, und zugestellte bis eine Stunde danach)
     function direktAktualisieren() {
+        // Sendungen aus Home Assistant ohne Verlauf selbst mitverfolgen (z. B. DHL ohne Schlüssel in Home Assistant)
+        var neu = [];
+        haSendungen.slice(0, 30).forEach(function (s) {
+            if (!s.ereignisse.length && !Logik.fertig(s) && s.nummer && Anbieter.namen(schluessel, s.dienst).length
+                && !direkt.some(function (x) { return x.nummer === String(s.nummer).toUpperCase(); }))
+                neu.push(Anbieter.neu(s.nummer, s.dienst, s.name || s.absender, s.ruecksendung));
+        });
+        if (neu.length) direktSetzen(direkt.concat(neu));
         var offen = direkt.filter(function (s) { return !Logik.fertig(s) || Date.now() - s.datum < 3600000; });
         offen.forEach(function (s) { einmalAbfragen(s); });
     }
@@ -138,6 +146,7 @@ QtObject {
             fehler = "";
             geladen = true;
             pruefeMitteilungen();
+            direktAktualisieren();
         });
     }
 

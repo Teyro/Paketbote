@@ -179,6 +179,13 @@ function zusammenfuehren(ha, direkt) {
         for (var k = 0; k < erg.length; k++) if (d.nummer && String(erg[k].nummer).toUpperCase() === d.nummer) { i = k; break; }
         if (i < 0) { erg.push(d); return; }
         var h = Object.assign({}, erg[i]);
+        // Die eigene Abfrage weiß mehr (Verlauf, weiterer Stand): deren Stand übernehmen
+        if (d.ereignisse.length && (!h.ereignisse.length || stufe(d) > stufe(h))) {
+            h.stand = d.stand; h.problem = d.problem; h.ereignisse = d.ereignisse; h.anbieter = d.anbieter;
+            if (d.statusText) h.statusText = d.statusText;
+            if (d.zeitfenster) h.zeitfenster = d.zeitfenster;
+            h.datum = Math.max(h.datum, d.datum);
+        }
         if (!h.ereignisse.length) h.ereignisse = d.ereignisse;
         if (!h.erwartet) h.erwartet = d.erwartet;
         if (!h.name) h.name = d.name;

@@ -5,7 +5,7 @@
 // DHL (Schlüssel) → UPS (Zugang) → 17TRACK (Schlüssel) → Ship24 (Schlüssel) → öffentliche Seiten von GLS und DPD.
 // Gleiche Auswertung wie PaketKern (Swift) und die Home-Assistant-Integration (Python).
 
-var AGENT = "Mozilla/5.0 (X11; Linux x86_64) Paketbote/1.1";
+var AGENT = "Mozilla/5.0 (X11; Linux x86_64) Paketbote/1.2";
 
 function anfrage(methode, url, kopf, koerper) {
     return new Promise(function (ok, fehler) {
@@ -49,8 +49,10 @@ function tag(s) {
 
 function standAusText(t) {
     var s = String(t || "").toLowerCase();
-    if (/zugestellt|delivered|ausgeliefert/.test(s)) return "zugestellt";
-    if (/abhol|pickup|paketshop|packstation|filiale/.test(s)) return "abholbereit";
+    var nicht = /nicht zugestellt|konnte nicht|not delivered/.test(s);
+    if (!nicht && /zugestellt|delivered|ausgeliefert|abgeholt|abholung aus/.test(s)) return "zugestellt";
+    if (/zur abholung|abholbereit|liegt in der packstation|liegt in der filiale|pickup|paketshop/.test(s)) return "abholbereit";
+    if (nicht) return "unterwegs";
     if (/in zustellung|zustellfahrzeug|out for delivery|wird heute/.test(s)) return "heute";
     return "unterwegs";
 }
@@ -139,7 +141,30 @@ function dpd(d) {
     });
 }
 
+function dhlOeffentlich(s) {
+    var d = s.sendungsdetails || {}, v = d.sendungsverlauf || {};
+    var ev = sortiert((v.events || []).map(function (e) { return ereignis(e.datum, String(e.status || "").replace(/  +/g, " "), e.ort); }));
+    var text = v.status || (ev.length ? ev[0].text : "");
+    var zu = !!d.istZugestellt;
+    var stand = zu ? "zugestellt" : standAusText(ev.length ? ev[0].text : text);
+    if (!zu && stand === "zugestellt") stand = standAusText(text);
+    return spur({ stand: stand, text: text, ereignisse: ev, ende: zu });
+}
+
 // --- Anbieter ---
+
+/** Alle Anbieter mit Beschreibung (für die Auswahl in den Einstellungen) */
+var BESCHREIBUNG = [
+    ["DHL", Logik.t("Offizielle DHL-Schnittstelle – eigener kostenloser Schlüssel")],
+    ["DHL (ohne Schlüssel)", Logik.t("DHL und Deutsche Post über die öffentliche Sendungsverfolgung – zwei Adressen als Ersatz")],
+    ["UPS", Logik.t("Offizielle UPS-Schnittstelle – eigener kostenloser Zugang")],
+    ["17TRACK", Logik.t("Fast alle Dienste – Schlüssel, 200 Sendungen frei")],
+    ["Ship24", Logik.t("Fast alle Dienste – Schlüssel")],
+    ["GLS (öffentlich)", Logik.t("Öffentliche GLS-Seite – inoffiziell")],
+    ["DPD (öffentlich)", Logik.t("Öffentliche DPD-Seite – inoffiziell")]
+];
+
+function an(s, name) { return (s.aus || []).indexOf(name) < 0; }
 
 var SIEBZEHN = { dhl: 7041, hermes: 100031, dpd: 100007, gls: 101070, ups: 100002 };
 
@@ -148,6 +173,13 @@ function kette(s, dienst) {
     if (s.dhl && (dienst === "dhl" || !dienst)) liste.push({ name: "DHL", frage: function (n) {
         return anfrage("GET", "https://api-eu.dhl.com/track/shipments?language=de&trackingNumber=" + encodeURIComponent(n), { "DHL-API-Key": s.dhl })
             .then(function (j) { if (!(j.shipments || [])[0]) throw "unbekannt"; return dhl(j.shipments[0]); });
+    } });
+    if (s.oeffentlich !== false && (dienst === "dhl" || !dienst)) liste.push({ name: "DHL (ohne Schlüssel)", frage: function (n) {
+        function host(h) {
+            return anfrage("GET", "https://" + h + "/int-verfolgen/data/search?language=de&piececode=" + encodeURIComponent(n), { "Accept": "application/json" })
+                .then(function (j) { var x = (j.sendungen || [])[0]; if (!x || !x.sendungsdetails) throw "unbekannt"; return dhlOeffentlich(x); });
+        }
+        return host("www.dhl.de").then(null, function () { return host("www.deutschepost.de"); });
     } });
     if (s.upsId && s.upsGeheim && dienst === "ups") liste.push({ name: "UPS", frage: function (n) {
         return anfrage("POST", "https://onlinetools.ups.com/security/v1/oauth/token",
@@ -170,14 +202,17 @@ function kette(s, dienst) {
             .then(function (j) { var t = (((j.data || {}).trackings) || [])[0]; if (!t) throw "unbekannt"; return ship24(t); });
     } });
     if (s.oeffentlich !== false && dienst === "gls") liste.push({ name: "GLS (öffentlich)", frage: function (n) {
-        return anfrage("GET", "https://gls-group.eu/app/service/open/rest/DE/de/rstt001?match=" + encodeURIComponent(n), { "User-Agent": AGENT })
-            .then(function (j) { var tu = (j.tuStatus || [])[0]; if (!tu) throw "unbekannt"; return gls(tu); });
+        function host(h) {
+            return anfrage("GET", "https://" + h + "/app/service/open/rest/DE/de/rstt001?match=" + encodeURIComponent(n), { "User-Agent": AGENT })
+                .then(function (j) { var tu = (j.tuStatus || [])[0]; if (!tu) throw "unbekannt"; return gls(tu); });
+        }
+        return host("gls-group.com").then(null, function () { return host("gls-group.eu"); });
     } });
     if (s.oeffentlich !== false && dienst === "dpd") liste.push({ name: "DPD (öffentlich)", frage: function (n) {
         return anfrage("GET", "https://tracking.dpd.de/rest/plc/de_DE/" + encodeURIComponent(n), { "User-Agent": AGENT })
             .then(function (j) { var d = (j.parcellifecycleResponse || {}).parcelLifeCycleData; if (!d) throw "unbekannt"; return dpd(d); });
     } });
-    return liste;
+    return liste.filter(function (a) { return an(s, a.name); });
 }
 
 function namen(s, dienst) { return kette(s, dienst).map(function (a) { return a.name; }); }

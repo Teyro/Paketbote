@@ -23,7 +23,7 @@ Kirigami.ApplicationWindow {
 
     // gemeinsam mit dem Plasma-Widget: ~/.config/paketbote.conf
     Settings {
-        id: einstellungen
+        id: speicher
         location: StandardPaths.writableLocation(StandardPaths.ConfigLocation) + "/paketbote.conf"
         property string adresse: ""
         property string token: ""
@@ -37,6 +37,8 @@ Kirigami.ApplicationWindow {
         property string siebzehn: ""
         property string ship24: ""
         property bool oeffentlich: true
+        // abgeschaltete Anbieter (JSON-Liste von Namen)
+        property string aus: "[]"
         property bool auchInHA: true
     }
 
@@ -45,14 +47,15 @@ Kirigami.ApplicationWindow {
 
     Verbindung {
         id: verbindung
-        adresse: einstellungen.adresse
-        token: einstellungen.token
-        konto: einstellungen.konto
-        auchInHA: einstellungen.auchInHA
-        schluessel: ({ dhl: einstellungen.dhl, upsId: einstellungen.upsId, upsGeheim: einstellungen.upsGeheim,
-                       siebzehn: einstellungen.siebzehn, ship24: einstellungen.ship24, oeffentlich: einstellungen.oeffentlich })
-        direkt: { try { return JSON.parse(einstellungen.direkt); } catch (e) { return []; } }
-        onDirektGeaendert: (liste) => einstellungen.direkt = JSON.stringify(liste)
+        adresse: speicher.adresse
+        token: speicher.token
+        konto: speicher.konto
+        auchInHA: speicher.auchInHA
+        schluessel: ({ dhl: speicher.dhl, upsId: speicher.upsId, upsGeheim: speicher.upsGeheim,
+                       siebzehn: speicher.siebzehn, ship24: speicher.ship24, oeffentlich: speicher.oeffentlich,
+                       aus: (function () { try { return JSON.parse(speicher.aus); } catch (e) { return []; } })() })
+        direkt: { try { return JSON.parse(speicher.direkt); } catch (e) { return []; } }
+        onDirektGeaendert: (liste) => speicher.direkt = JSON.stringify(liste)
         onMeldung: (text) => fenster.showPassiveNotification(text)
         onNeuerStand: (titel, text, id) => {
             fenster.showPassiveNotification(titel + ": " + text, "long");
@@ -63,7 +66,7 @@ Kirigami.ApplicationWindow {
     // Mitteilung auf dem Schreibtisch (KDE-Benachrichtigungen; fehlt das Modul, bleibt es bei der Meldung im Fenster)
     Loader { id: mitteilung; source: "../gemeinsam/Mitteilung.qml" }
 
-    readonly property var gruppen: Logik.gruppen(verbindung.sendungen, jetzt, einstellungen.tageZugestellt)
+    readonly property var gruppen: Logik.gruppen(verbindung.sendungen, jetzt, speicher.tageZugestellt)
     property string auswahl: ""
     readonly property var gewaehlt: verbindung.sendungen.find(function (s) { return s.id === fenster.auswahl; }) || null
 
@@ -94,7 +97,7 @@ Kirigami.ApplicationWindow {
 
     Component {
         id: einstellungsSeite
-        EinstellungenSeite { ha: verbindung; einstellungen: einstellungen }
+        EinstellungenSeite { ha: verbindung; einstellungen: speicher }
     }
 
     Kirigami.Dialog {

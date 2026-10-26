@@ -47,6 +47,7 @@
 "Deine Sendungen mit voraussichtlicher Zustellung." = "Deine Sendungen mit voraussichtlicher Zustellung.";
 "Dez" = "Dez";
 "DHL live" = "DHL live";
+"DHL und Deutsche Post über die öffentliche Sendungsverfolgung – zwei Adressen als Ersatz" = "DHL und Deutsche Post über die öffentliche Sendungsverfolgung – zwei Adressen als Ersatz";
 "DHL-API-Schlüssel" = "DHL-API-Schlüssel";
 "DHL-Schlüssel (kostenlos)" = "DHL-Schlüssel (kostenlos)";
 "Di" = "Di";
@@ -57,6 +58,7 @@
 "Die Nummer passt zu mehreren Diensten – bitte den Paketdienst wählen." = "Die Nummer passt zu mehreren Diensten – bitte den Paketdienst wählen.";
 "Dienst" = "Dienst";
 "Direkt verfolgen" = "Direkt verfolgen";
+"Direkt verfolgen – Anbieter" = "Direkt verfolgen – Anbieter";
 "direkt verfolgt" = "direkt verfolgt";
 "Do" = "Do";
 "Doch nicht angekommen" = "Doch nicht angekommen";
@@ -69,6 +71,8 @@
 "Einstellungen" = "Einstellungen";
 "Einstellungen …" = "Einstellungen …";
 "Entfernen" = "Entfernen";
+"Fast alle Dienste – Schlüssel" = "Fast alle Dienste – Schlüssel";
+"Fast alle Dienste – Schlüssel, 200 Sendungen frei" = "Fast alle Dienste – Schlüssel, 200 Sendungen frei";
 "Feb" = "Feb";
 "Fehler %1 von Home Assistant." = "Fehler %1 von Home Assistant.";
 "Fertig" = "Fertig";
@@ -138,15 +142,19 @@
 "Nummer hierher ziehen oder ⌥⌘P drücken" = "Nummer hierher ziehen oder ⌥⌘P drücken";
 "Nummer kopieren" = "Nummer kopieren";
 "Nummer kopiert" = "Nummer kopiert";
-"Öffentliche Seiten von GLS und DPD als Notnagel" = "Öffentliche Seiten von GLS und DPD als Notnagel";
+"Öffentliche DPD-Seite – inoffiziell" = "Öffentliche DPD-Seite – inoffiziell";
+"Öffentliche GLS-Seite – inoffiziell" = "Öffentliche GLS-Seite – inoffiziell";
+"Öffentliche Seiten fragen (DHL ohne Schlüssel, GLS, DPD)" = "Öffentliche Seiten fragen (DHL ohne Schlüssel, GLS, DPD)";
+"Offizielle DHL-Schnittstelle – eigener kostenloser Schlüssel" = "Offizielle DHL-Schnittstelle – eigener kostenloser Schlüssel";
+"Offizielle UPS-Schnittstelle – eigener kostenloser Zugang" = "Offizielle UPS-Schnittstelle – eigener kostenloser Zugang";
 "Okt" = "Okt";
 "Paket" = "Paket";
 "Paketbote" = "Paketbote";
 "Paketbote auf dem iPhone öffnen." = "Paketbote auf dem iPhone öffnen.";
 "Paketbote auf GitHub" = "Paketbote auf GitHub";
 "Paketbote einrichten" = "Paketbote einrichten";
-"Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein." = "Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein.";
-"Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein. Die Schlüssel bleiben im Schlüsselbund dieses Geräts." = "Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein. Die Schlüssel bleiben im Schlüsselbund dieses Geräts.";
+"Paketbote fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel." = "Paketbote fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel.";
+"Paketbote fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel. Die Schlüssel bleiben im Schlüsselbund dieses Geräts." = "Paketbote fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel. Die Schlüssel bleiben im Schlüsselbund dieses Geräts.";
 "Paketbote fragt selbst bei den Anbietern nach – auch ohne Home Assistant." = "Paketbote fragt selbst bei den Anbietern nach – auch ohne Home Assistant.";
 "Paketbote fragt selbst bei den Anbietern nach und trägt die Sendung auch in Home Assistant ein." = "Paketbote fragt selbst bei den Anbietern nach und trägt die Sendung auch in Home Assistant ein.";
 "Paketdienst" = "Paketdienst";
@@ -160,6 +168,7 @@
 "Quelle" = "Quelle";
 "Rücksendung" = "Rücksendung";
 "Sa" = "Sa";
+"Schlüssel" = "Schlüssel";
 "Schlüssel abgelehnt" = "Schlüssel abgelehnt";
 "Sendung %1" = "Sendung %1";
 "Sendung hinzufügen" = "Sendung hinzufügen";

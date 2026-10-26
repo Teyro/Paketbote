@@ -34,6 +34,8 @@ PlasmoidItem {
         property string siebzehn: ""
         property string ship24: ""
         property bool oeffentlich: true
+        // abgeschaltete Anbieter (JSON-Liste von Namen)
+        property string aus: "[]"
         property bool auchInHA: true
     }
 
@@ -47,7 +49,8 @@ PlasmoidItem {
         konto: gemeinsam.konto
         auchInHA: gemeinsam.auchInHA
         schluessel: ({ dhl: gemeinsam.dhl, upsId: gemeinsam.upsId, upsGeheim: gemeinsam.upsGeheim,
-                       siebzehn: gemeinsam.siebzehn, ship24: gemeinsam.ship24, oeffentlich: gemeinsam.oeffentlich })
+                       siebzehn: gemeinsam.siebzehn, ship24: gemeinsam.ship24, oeffentlich: gemeinsam.oeffentlich,
+                       aus: (function () { try { return JSON.parse(gemeinsam.aus); } catch (e) { return []; } })() })
         direkt: { try { return JSON.parse(gemeinsam.direkt); } catch (e) { return []; } }
         onDirektGeaendert: (liste) => gemeinsam.direkt = JSON.stringify(liste)
         Component.onCompleted: laden()

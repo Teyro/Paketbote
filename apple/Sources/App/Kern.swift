@@ -86,10 +86,17 @@ final class Kern {
         } else {
             fehler = ""
         }
-        if !direkt.sendungen.isEmpty && !vorschau {
+        if !vorschau {
             // ohne await auf die Eigenschaft: Kopie bearbeiten, dann zurückschreiben
             var liste = direkt
-            _ = await liste.aktualisieren(verfolgung)
+            // Sendungen aus Home Assistant ohne Verlauf selbst mitverfolgen (z. B. DHL ohne Schlüssel in Home Assistant)
+            for s in (daten?.sendungen ?? []).prefix(30) where s.ereignisse.isEmpty && !s.fertig && !s.nummer.isEmpty
+                && !liste.sendungen.contains(where: { $0.nummer == s.nummer.uppercased() }) && !verfolgung.moeglich(s.dienst).isEmpty {
+                liste.hinzufuegen(nummer: s.nummer, dienst: s.dienst, name: s.name.isEmpty ? s.absender : s.name, ruecksendung: s.ruecksendung)
+            }
+            if !liste.sendungen.isEmpty {
+                _ = await liste.aktualisieren(verfolgung)
+            }
             direkt = liste
             liste.speichern()
         }

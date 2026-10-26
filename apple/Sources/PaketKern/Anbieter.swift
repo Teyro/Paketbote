@@ -34,10 +34,32 @@ public struct Schluessel: Codable, Hashable, Sendable {
     public var upsGeheim = ""
     public var siebzehn = ""
     public var ship24 = ""
-    /// Öffentliche Seiten (GLS, DPD) als letzten Notnagel fragen
+    /// Öffentliche Seiten (DHL/Deutsche Post ohne Schlüssel, GLS, DPD) fragen
     public var oeffentlich = true
+    /// Abgeschaltete Anbieter (Namen, z. B. "Ship24")
+    public var aus: [String] = []
 
     public init() {}
+
+    enum CodingKeys: String, CodingKey { case dhl, upsId, upsGeheim, siebzehn, ship24, oeffentlich, aus }
+
+    // ältere Stände kennen nicht alle Felder – fehlende bleiben beim Standard
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        dhl = try c.decodeIfPresent(String.self, forKey: .dhl) ?? ""
+        upsId = try c.decodeIfPresent(String.self, forKey: .upsId) ?? ""
+        upsGeheim = try c.decodeIfPresent(String.self, forKey: .upsGeheim) ?? ""
+        siebzehn = try c.decodeIfPresent(String.self, forKey: .siebzehn) ?? ""
+        ship24 = try c.decodeIfPresent(String.self, forKey: .ship24) ?? ""
+        oeffentlich = try c.decodeIfPresent(Bool.self, forKey: .oeffentlich) ?? true
+        aus = try c.decodeIfPresent([String].self, forKey: .aus) ?? []
+    }
+
+    public func an(_ name: String) -> Bool { !aus.contains(name) }
+    public mutating func setzen(_ name: String, _ an: Bool) {
+        aus.removeAll { $0 == name }
+        if !an { aus.append(name) }
+    }
 }
 
 public enum AnbieterFehler: Error, Equatable, Sendable {
@@ -61,16 +83,28 @@ public struct Verfolgung: Sendable {
         self.anbieter = anbieter
     }
 
-    public static let standard: [any Anbieter] = [DHLAnbieter(), UPSAnbieter(), SiebzehnAnbieter(), Ship24Anbieter(), GLSAnbieter(), DPDAnbieter()]
+    public static let standard: [any Anbieter] = [DHLAnbieter(), DHLOeffentlichAnbieter(), UPSAnbieter(), SiebzehnAnbieter(), Ship24Anbieter(),
+                                                  GLSAnbieter(), DPDAnbieter()]
+
+    /// Alle Anbieter mit Beschreibung (für die Auswahl in den Einstellungen)
+    public static let beschreibung: [(name: String, text: String)] = [
+        ("DHL", T("Offizielle DHL-Schnittstelle – eigener kostenloser Schlüssel")),
+        ("DHL (ohne Schlüssel)", T("DHL und Deutsche Post über die öffentliche Sendungsverfolgung – zwei Adressen als Ersatz")),
+        ("UPS", T("Offizielle UPS-Schnittstelle – eigener kostenloser Zugang")),
+        ("17TRACK", T("Fast alle Dienste – Schlüssel, 200 Sendungen frei")),
+        ("Ship24", T("Fast alle Dienste – Schlüssel")),
+        ("GLS (öffentlich)", T("Öffentliche GLS-Seite – inoffiziell")),
+        ("DPD (öffentlich)", T("Öffentliche DPD-Seite – inoffiziell")),
+    ]
 
     /// Welche Anbieter kämen für diesen Dienst in Frage (für die Anzeige „über DHL, Ersatz: 17TRACK“)
-    public func moeglich(_ dienst: String) -> [String] { anbieter.filter { $0.kann(dienst, schluessel) }.map(\.name) }
+    public func moeglich(_ dienst: String) -> [String] { anbieter.filter { schluessel.an($0.name) && $0.kann(dienst, schluessel) }.map(\.name) }
 
     /// Abfragen; gibt die Spur und die Fehler der übersprungenen Anbieter zurück
     public func abfragen(_ nummer: String, dienst: String) async -> (spur: Spur?, fehler: [String: AnbieterFehler]) {
         var fehler: [String: AnbieterFehler] = [:]
         var leer: Spur?
-        for a in anbieter where a.kann(dienst, schluessel) {
+        for a in anbieter where schluessel.an(a.name) && a.kann(dienst, schluessel) {
             do {
                 var s = try await a.abfragen(nummer, dienst: dienst, schluessel: schluessel)
                 s.quelle = a.name
@@ -90,7 +124,7 @@ public struct Verfolgung: Sendable {
 // MARK: - Hilfen
 
 enum Netz {
-    static let agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Paketbote/1.1"
+    static let agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Paketbote/1.2"
 
     static func json(_ url: URL, methode: String = "GET", kopf: [String: String] = [:], koerper: Data? = nil) async throws -> JSON {
         var r = URLRequest(url: url)
@@ -133,8 +167,13 @@ enum Netz {
     /// Stand aus einem Freitext erraten (für Anbieter ohne feste Codes)
     static func standAusText(_ t: String) -> String {
         let s = t.lowercased()
-        if s.contains("zugestellt") || s.contains("delivered") || s.contains("ausgeliefert") { return "zugestellt" }
-        if s.contains("abhol") || s.contains("pickup") || s.contains("paketshop") || s.contains("packstation") || s.contains("filiale") { return "abholbereit" }
+        let nicht = s.contains("nicht zugestellt") || s.contains("konnte nicht") || s.contains("not delivered")
+        if !nicht && (s.contains("zugestellt") || s.contains("delivered") || s.contains("ausgeliefert") || s.contains("abgeholt") || s.contains("abholung aus")) {
+            return "zugestellt"
+        }
+        if s.contains("zur abholung") || s.contains("abholbereit") || s.contains("liegt in der packstation") || s.contains("liegt in der filiale")
+            || s.contains("pickup") || s.contains("paketshop") { return "abholbereit" }
+        if nicht { return "unterwegs" }
         if s.contains("in zustellung") || s.contains("zustellfahrzeug") || s.contains("out for delivery") || s.contains("wird heute") { return "heute" }
         return "unterwegs"
     }
@@ -173,6 +212,55 @@ public struct DHLAnbieter: Anbieter {
             return Ereignis(zeit: e["timestamp"]?.text.flatMap(Uebersicht.isoZeit), text: t,
                             ort: e["location"]?["address"]?["addressLocality"]?.text ?? "")
         })
+        return spur
+    }
+}
+
+// MARK: - DHL ohne Schlüssel (öffentliche Sendungsverfolgung; dhl.de, ersatzweise deutschepost.de)
+
+public struct DHLOeffentlichAnbieter: Anbieter {
+    public init() {}
+    public var name: String { "DHL (ohne Schlüssel)" }
+    public func kann(_ dienst: String, _ s: Schluessel) -> Bool { s.oeffentlich && (dienst == "dhl" || dienst.isEmpty) }
+
+    public func abfragen(_ nummer: String, dienst: String, schluessel: Schluessel) async throws -> Spur {
+        let n = nummer.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? nummer
+        let sprache = Sprache.code == "de" ? "de" : "en"
+        var letzter: Error = AnbieterFehler.netz
+        for host in ["www.dhl.de", "www.deutschepost.de"] {
+            do {
+                let j = try await Netz.json(URL(string: "https://\(host)/int-verfolgen/data/search?piececode=\(n)&language=\(sprache)")!)
+                guard let s = j["sendungen"]?[0], s["sendungsdetails"] != nil else { throw AnbieterFehler.unbekannt }
+                return Self.lesen(s)
+            } catch {
+                letzter = error
+            }
+        }
+        throw letzter
+    }
+
+    static func lesen(_ s: JSON) -> Spur {
+        var spur = Spur()
+        let d = s["sendungsdetails"], v = d?["sendungsverlauf"]
+        spur.ereignisse = Netz.sortiert((v?["events"]?.liste ?? []).compactMap { e in
+            guard let t = e["status"]?.text, !t.isEmpty else { return nil }
+            return Ereignis(zeit: e["datum"]?.text.flatMap(Uebersicht.isoZeit), text: t.replacingOccurrences(of: "  ", with: " "), ort: e["ort"]?.text ?? "")
+        })
+        spur.text = v?["status"]?.text ?? spur.ereignisse.first?.text ?? ""
+        let zugestellt = d?["istZugestellt"]?.bool ?? false
+        spur.stand = zugestellt ? "zugestellt" : Netz.standAusText(spur.ereignisse.first?.text ?? spur.text)
+        if !zugestellt && spur.stand == "zugestellt" { spur.stand = Netz.standAusText(spur.text) }
+        spur.ende = zugestellt
+        // Termin und Zeitfenster stehen (wenn bekannt) unter "zustellung" – Namen schwanken, darum suchen
+        if let z = d?["zustellung"]?.objekt {
+            for (k, w) in z {
+                let k2 = k.lowercased()
+                if spur.erwartet.isEmpty, k2.contains("datum") || k2.contains("tag"), let t = w.text { spur.erwartet = Netz.tag(t) }
+                if k2.contains("zeitfenster"), let o = w.objekt, let von = o["von"]?.text ?? o["start"]?.text, let bis = o["bis"]?.text ?? o["ende"]?.text {
+                    spur.zeitfenster = "\(von.suffix(5))–\(bis.suffix(5))"
+                }
+            }
+        }
         return spur
     }
 }
@@ -315,12 +403,19 @@ public struct GLSAnbieter: Anbieter {
     public init() {}
     public var name: String { "GLS (öffentlich)" }
     public func kann(_ dienst: String, _ s: Schluessel) -> Bool { s.oeffentlich && dienst == "gls" }
+    static let hosts = ["gls-group.com", "gls-group.eu"]
 
     public func abfragen(_ nummer: String, dienst: String, schluessel: Schluessel) async throws -> Spur {
         let n = nummer.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? nummer
-        let j = try await Netz.json(URL(string: "https://gls-group.eu/app/service/open/rest/DE/de/rstt001?match=\(n)")!)
-        guard let tu = j["tuStatus"]?[0] else { throw AnbieterFehler.unbekannt }
-        return Self.lesen(tu)
+        var letzter: Error = AnbieterFehler.netz
+        for h in Self.hosts {
+            do {
+                let j = try await Netz.json(URL(string: "https://\(h)/app/service/open/rest/DE/de/rstt001?match=\(n)")!)
+                guard let tu = j["tuStatus"]?[0] else { throw AnbieterFehler.unbekannt }
+                return Self.lesen(tu)
+            } catch { letzter = error }
+        }
+        throw letzter
     }
 
     static func lesen(_ tu: JSON) -> Spur {

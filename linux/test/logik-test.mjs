@@ -8,7 +8,9 @@ const lies = (n) => fs.readFileSync(new URL(n, ordner), 'utf8').replace(/^\.(pra
 function laden(sprache) {
   const ctx = { Qt: { locale: () => ({ name: sprache }) }, console };
   vm.createContext(ctx);
-  vm.runInContext(lies('uebersetzung.js') + '\nvar U = { EN: EN };\n' + lies('sprache.js') + '\nvar S = { t: t };\n' + lies('logik.js'), ctx);
+  vm.runInContext(lies('uebersetzung.js') + '\nvar U = { EN: EN };\n' + lies('sprache.js') + '\nvar S = { t: t };\n' + lies('logik.js')
+    + '\nvar Logik = { t: t, dienst: dienst, stufe: stufe };\nvar A = (function () {\n' + lies('anbieter.js')
+    + '\nreturn { kette: kette, namen: namen, dhlOeffentlich: dhlOeffentlich, standAusText: standAusText, BESCHREIBUNG: BESCHREIBUNG };\n})();', ctx);
   return ctx;
 }
 const L = laden('de_DE');
@@ -42,4 +44,21 @@ assert.equal(L.mitteilung(s[0], s[0]), null);
 assert.equal(L.adresse('homeassistant.local:8123/'), 'http://homeassistant.local:8123');
 const E = laden('en_GB');
 assert.equal(E.standText(E.sendungenAus(antwort)[2], jetzt), 'arrives tomorrow');
+// Anbieter
+const A = L.A;
+assert.equal(JSON.stringify(A.namen({ oeffentlich: true }, 'dhl')), JSON.stringify(['DHL (ohne Schlüssel)']));
+assert.equal(JSON.stringify(A.namen({ dhl: 'k', siebzehn: 'x', aus: ['17TRACK'] }, 'dhl')), JSON.stringify(['DHL', 'DHL (ohne Schlüssel)']));
+assert.equal(JSON.stringify(A.namen({ oeffentlich: false }, 'hermes')), '[]');
+const dp = A.dhlOeffentlich({ sendungsdetails: { istZugestellt: true, sendungsverlauf: { status: 'Abholung aus Packstation', events: [
+  { datum: '2026-10-19T14:13:52+02:00', status: 'Die Sendung liegt in der Packstation zur Abholung bereit.' },
+  { datum: '2026-10-21T15:29:34+02:00', status: 'Abholung aus Packstation' }] } } });
+assert.equal(dp.stand, 'zugestellt');
+assert.equal(dp.ereignisse[0].text, 'Abholung aus Packstation');
+assert.equal(A.standAusText('Die Sendung konnte nicht zugestellt werden und wird in eine Packstation gebracht.'), 'unterwegs');
+assert.equal(A.standAusText('Die Sendung liegt in der Packstation zur Abholung bereit.'), 'abholbereit');
+assert.equal(A.BESCHREIBUNG.length, 7);
+// eigener Stand gewinnt beim Zusammenführen
+const ha = L.sendungenAus({ briefe: [{ id: 'x', datum: jetzt, art: 'paket', name: 'Test', sendung: '00340434161094015902', dienst: 'dhl' }] });
+const m = L.zusammenfuehren(ha, [{ id: 'd', datum: jetzt, nummer: '00340434161094015902', dienst: 'dhl', stand: 'zugestellt', ereignisse: [{ zeit: jetzt, text: 'Abgeholt' }], quelle: 'direkt' }]);
+assert.equal(m.length, 1); assert.equal(m[0].id, 'x'); assert.equal(m[0].stand, 'zugestellt');
 console.log('logik.js: alle Prüfungen bestanden');

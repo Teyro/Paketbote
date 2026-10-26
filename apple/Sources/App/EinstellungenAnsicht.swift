@@ -103,26 +103,43 @@ struct EinstellungenAnsicht: View {
     }
 }
 
-/// Direkt verfolgen: Schlüssel der Anbieter (DHL, UPS, 17TRACK, Ship24) und öffentliche Seiten
+/// Direkt verfolgen: Anbieter wählen (an/aus) und ihre Schlüssel – der Reihe nach gefragt, der nächste springt ein
 struct DirektEinstellungen: View {
     @Bindable var kern: Kern
     var body: some View {
         @Bindable var e = kern.einstellungen
         Section {
-            SecureField(T("DHL-API-Schlüssel"), text: $e.schluessel.dhl)
-            SecureField(T("UPS Client-ID"), text: $e.schluessel.upsId)
-            SecureField(T("UPS Client-Secret"), text: $e.schluessel.upsGeheim)
-            SecureField(T("17TRACK-Schlüssel"), text: $e.schluessel.siebzehn)
-            SecureField(T("Ship24-Schlüssel"), text: $e.schluessel.ship24)
-            Toggle(T("Öffentliche Seiten von GLS und DPD als Notnagel"), isOn: $e.schluessel.oeffentlich)
+            ForEach(Verfolgung.beschreibung, id: \.name) { a in
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle(isOn: Binding(get: { e.schluessel.an(a.name) }, set: { e.schluessel.setzen(a.name, $0) })) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(a.name)
+                            Text(a.text).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    if e.schluessel.an(a.name) {
+                        switch a.name {
+                        case "DHL": SecureField(T("DHL-API-Schlüssel"), text: $e.schluessel.dhl)
+                        case "UPS":
+                            SecureField(T("UPS Client-ID"), text: $e.schluessel.upsId)
+                            SecureField(T("UPS Client-Secret"), text: $e.schluessel.upsGeheim)
+                        case "17TRACK": SecureField(T("17TRACK-Schlüssel"), text: $e.schluessel.siebzehn)
+                        case "Ship24": SecureField(T("Ship24-Schlüssel"), text: $e.schluessel.ship24)
+                        default: EmptyView()
+                        }
+                    }
+                }
+                .textFieldStyle(.roundedBorder)
+            }
+            Toggle(T("Öffentliche Seiten fragen (DHL ohne Schlüssel, GLS, DPD)"), isOn: $e.schluessel.oeffentlich)
             if e.eingerichtet {
                 Toggle(T("Auch in Home Assistant eintragen"), isOn: $e.auchInHA)
             }
         } header: {
-            Text(T("Direkt verfolgen"))
+            Text(T("Direkt verfolgen – Anbieter"))
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
-                Text(T("Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein. Die Schlüssel bleiben im Schlüsselbund dieses Geräts."))
+                Text(T("Paketbote fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel. Die Schlüssel bleiben im Schlüsselbund dieses Geräts."))
                 Link(T("DHL-Schlüssel (kostenlos)"), destination: URL(string: "https://developer.dhl.com")!)
                 Link(T("UPS-Zugang (kostenlos)"), destination: URL(string: "https://developer.ups.com")!)
                 Link(T("17TRACK-Schlüssel (200 Sendungen frei)"), destination: URL(string: "https://api.17track.net")!)

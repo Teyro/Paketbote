@@ -30,10 +30,44 @@ final class AnbieterTests: XCTestCase {
         var s = Schluessel()
         XCTAssertEqual(Verfolgung(schluessel: s).moeglich("gls"), ["GLS (öffentlich)"])
         s.dhl = "x"; s.siebzehn = "y"; s.ship24 = "z"
-        XCTAssertEqual(Verfolgung(schluessel: s).moeglich("dhl"), ["DHL", "17TRACK", "Ship24"])
+        XCTAssertEqual(Verfolgung(schluessel: s).moeglich("dhl"), ["DHL", "DHL (ohne Schlüssel)", "17TRACK", "Ship24"])
+        s.setzen("Ship24", false)
+        XCTAssertEqual(Verfolgung(schluessel: s).moeglich("dhl"), ["DHL", "DHL (ohne Schlüssel)", "17TRACK"])
+        s.setzen("Ship24", true)
         XCTAssertEqual(Verfolgung(schluessel: s).moeglich("amazon"), ["Ship24"])
         s.oeffentlich = false
         XCTAssertEqual(Verfolgung(schluessel: s).moeglich("dpd"), ["17TRACK", "Ship24"])
+    }
+
+    func testDHLOhneSchluessel() {
+        let j = JSON.lesen(#"{"id":"00340434161094015902","sendungsdetails":{"istZugestellt":true,"sendungsverlauf":{"status":"Abholung aus Packstation","events":[{"datum":"2026-10-16T17:37:10+02:00","status":"Die Sendung wurde elektronisch angekündigt."},{"datum":"2026-10-19T07:58:09+02:00","status":"Die Sendung wurde in das Zustellfahrzeug geladen. Die Zustellung  erfolgt voraussichtlich heute."},{"datum":"2026-10-19T12:53:25+02:00","status":"Die Sendung konnte nicht zugestellt werden und wird in eine Packstation gebracht."},{"datum":"2026-10-19T14:13:52+02:00","status":"Die Sendung liegt in der Packstation zur Abholung bereit."},{"datum":"2026-10-21T15:29:34+02:00","status":"Abholung aus Packstation"}]},"zustellung":{"hasDeliveryDateMismatch":false}}}"#)!
+        let s = DHLOeffentlichAnbieter.lesen(j)
+        XCTAssertEqual(s.stand, "zugestellt")
+        XCTAssertTrue(s.ende)
+        XCTAssertEqual(s.ereignisse.count, 5)
+        XCTAssertEqual(s.ereignisse.first?.text, "Abholung aus Packstation")
+        XCTAssertTrue(s.ereignisse[3].text.contains("Zustellung erfolgt"), "doppelte Leerzeichen raus")
+        // Stand aus Texten
+        XCTAssertEqual(Netz.standAusText("Die Sendung liegt in der Packstation zur Abholung bereit."), "abholbereit")
+        XCTAssertEqual(Netz.standAusText("Die Sendung konnte nicht zugestellt werden und wird in eine Packstation gebracht."), "unterwegs")
+        XCTAssertEqual(Netz.standAusText("Der Empfänger hat die Sendung aus der Packstation abgeholt."), "zugestellt")
+        XCTAssertEqual(Netz.standAusText("Die Sendung wurde in das Zustellfahrzeug geladen."), "heute")
+        // ältere gespeicherte Schlüssel ohne „aus“ lesen
+        let alt = try! JSONDecoder().decode(Schluessel.self, from: Data(#"{"dhl":"k","upsId":"","upsGeheim":"","siebzehn":"","ship24":"","oeffentlich":true}"#.utf8))
+        XCTAssertEqual(alt.dhl, "k")
+        XCTAssertTrue(alt.an("Ship24"))
+    }
+
+    func testZusammenfuehrenEigenerStandGewinnt() {
+        let ha = Sendung(id: "x", name: "Test", nummer: "00340434161094015902", dienst: "dhl", stand: "unterwegs", manuell: true)
+        var d = Sendung(id: "d", nummer: "00340434161094015902", dienst: "dhl", quelle: "direkt")
+        d.stand = "zugestellt"
+        d.ereignisse = [Ereignis(zeit: Date(), text: "Abholung aus Packstation")]
+        let m = zusammenfuehren(ha: [ha], direkt: [d])
+        XCTAssertEqual(m.count, 1)
+        XCTAssertEqual(m[0].id, "x")
+        XCTAssertEqual(m[0].stand, "zugestellt")
+        XCTAssertEqual(m[0].name, "Test")
     }
 
     func testDHL() {

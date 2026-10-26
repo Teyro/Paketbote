@@ -92,8 +92,18 @@ public func zusammenfuehren(ha: [Sendung], direkt: [Sendung]) -> [Sendung] {
     var erg = ha
     for d in direkt {
         if let i = erg.firstIndex(where: { !d.nummer.isEmpty && $0.nummer.uppercased() == d.nummer }) {
+            // Die eigene Abfrage weiß mehr (Verlauf, weiterer Stand): deren Stand übernehmen
+            if !d.ereignisse.isEmpty && (erg[i].ereignisse.isEmpty || d.stufe > erg[i].stufe) {
+                erg[i].stand = d.stand
+                erg[i].problem = d.problem
+                if !d.statusText.isEmpty { erg[i].statusText = d.statusText }
+                if !d.zeitfenster.isEmpty { erg[i].zeitfenster = d.zeitfenster }
+                erg[i].ereignisse = d.ereignisse
+                erg[i].anbieter = d.anbieter
+                erg[i].datum = max(erg[i].datum, d.datum)
+            }
             if erg[i].ereignisse.isEmpty { erg[i].ereignisse = d.ereignisse }
-            if erg[i].erwartet.isEmpty { erg[i].erwartet = d.erwartet }
+            if erg[i].erwartet.isEmpty || (d.stufe >= erg[i].stufe && !d.erwartet.isEmpty) { erg[i].erwartet = d.erwartet.isEmpty ? erg[i].erwartet : d.erwartet }
             if erg[i].name.isEmpty { erg[i].name = d.name }
             erg[i].ruecksendung = erg[i].ruecksendung || d.ruecksendung
             if erg[i].anbieter.isEmpty { erg[i].anbieter = d.anbieter }

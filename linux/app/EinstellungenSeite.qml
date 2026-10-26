@@ -7,12 +7,19 @@ import QtQuick.Layouts
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 import "../gemeinsam/sprache.js" as S
+import "../gemeinsam/anbieter.js" as Anbieter
 
 Kirigami.ScrollablePage {
     id: seite
     required property var ha
     required property var einstellungen
     title: S.t("Einstellungen")
+    readonly property var aus: { try { return JSON.parse(einstellungen.aus); } catch (e) { return []; } }
+    function anbieterSetzen(name, an) {
+        var l = aus.filter(function (x) { return x !== name; });
+        if (!an) l.push(name);
+        einstellungen.aus = JSON.stringify(l);
+    }
 
     Kirigami.FormLayout {
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Home Assistant") }
@@ -49,38 +56,56 @@ Kirigami.ScrollablePage {
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Direkt verfolgen") }
         QQC2.Label {
             Layout.maximumWidth: Kirigami.Units.gridUnit * 20
-            text: S.t("Paketbote fragt die Anbieter der Reihe nach: DHL → UPS → 17TRACK → Ship24 → öffentliche Seiten. Fällt einer aus, springt der nächste ein.")
+            text: S.t("Paketbote fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel.")
             wrapMode: Text.Wrap
             font: Kirigami.Theme.smallFont
             color: Kirigami.Theme.disabledTextColor
         }
-        Kirigami.PasswordField {
-            Kirigami.FormData.label: S.t("DHL-API-Schlüssel")
-            text: seite.einstellungen.dhl
-            onEditingFinished: seite.einstellungen.dhl = text.trim()
-        }
-        QQC2.TextField {
-            Kirigami.FormData.label: S.t("UPS Client-ID")
-            text: seite.einstellungen.upsId
-            onEditingFinished: seite.einstellungen.upsId = text.trim()
-        }
-        Kirigami.PasswordField {
-            Kirigami.FormData.label: S.t("UPS Client-Secret")
-            text: seite.einstellungen.upsGeheim
-            onEditingFinished: seite.einstellungen.upsGeheim = text.trim()
-        }
-        Kirigami.PasswordField {
-            Kirigami.FormData.label: S.t("17TRACK-Schlüssel")
-            text: seite.einstellungen.siebzehn
-            onEditingFinished: seite.einstellungen.siebzehn = text.trim()
-        }
-        Kirigami.PasswordField {
-            Kirigami.FormData.label: S.t("Ship24-Schlüssel")
-            text: seite.einstellungen.ship24
-            onEditingFinished: seite.einstellungen.ship24 = text.trim()
+        Repeater {
+            model: Anbieter.BESCHREIBUNG
+            ColumnLayout {
+                id: eintrag
+                required property var modelData
+                readonly property string name: modelData[0]
+                readonly property bool aktiv: seite.aus.indexOf(name) < 0
+                Kirigami.FormData.label: name
+                Layout.maximumWidth: Kirigami.Units.gridUnit * 20
+                spacing: 2
+                QQC2.CheckBox {
+                    text: eintrag.modelData[1]
+                    checked: eintrag.aktiv
+                    onToggled: seite.anbieterSetzen(eintrag.name, checked)
+                    contentItem: QQC2.Label { leftPadding: parent.indicator.width + parent.spacing; text: parent.text; wrapMode: Text.Wrap }
+                }
+                Kirigami.PasswordField {
+                    Layout.fillWidth: true
+                    visible: eintrag.aktiv && ["DHL", "17TRACK", "Ship24"].indexOf(eintrag.name) >= 0
+                    placeholderText: S.t("Schlüssel")
+                    text: eintrag.name === "DHL" ? seite.einstellungen.dhl : eintrag.name === "17TRACK" ? seite.einstellungen.siebzehn : seite.einstellungen.ship24
+                    onEditingFinished: {
+                        if (eintrag.name === "DHL") seite.einstellungen.dhl = text.trim();
+                        else if (eintrag.name === "17TRACK") seite.einstellungen.siebzehn = text.trim();
+                        else seite.einstellungen.ship24 = text.trim();
+                    }
+                }
+                QQC2.TextField {
+                    Layout.fillWidth: true
+                    visible: eintrag.aktiv && eintrag.name === "UPS"
+                    placeholderText: S.t("UPS Client-ID")
+                    text: seite.einstellungen.upsId
+                    onEditingFinished: seite.einstellungen.upsId = text.trim()
+                }
+                Kirigami.PasswordField {
+                    Layout.fillWidth: true
+                    visible: eintrag.aktiv && eintrag.name === "UPS"
+                    placeholderText: S.t("UPS Client-Secret")
+                    text: seite.einstellungen.upsGeheim
+                    onEditingFinished: seite.einstellungen.upsGeheim = text.trim()
+                }
+            }
         }
         QQC2.CheckBox {
-            text: S.t("Öffentliche Seiten von GLS und DPD als Notnagel")
+            text: S.t("Öffentliche Seiten fragen (DHL ohne Schlüssel, GLS, DPD)")
             checked: seite.einstellungen.oeffentlich
             onToggled: seite.einstellungen.oeffentlich = checked
         }
@@ -107,7 +132,7 @@ Kirigami.ScrollablePage {
         }
 
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Über") }
-        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: "1.1.0" }
+        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: "1.2.0" }
         Kirigami.UrlButton { Kirigami.FormData.label: S.t("Paketbote auf GitHub"); url: "https://github.com/Teyro/Paketbote" }
         Kirigami.UrlButton { Kirigami.FormData.label: S.t("Integration (HACS)"); url: "https://github.com/Teyro/Briefankuendigung-HA" }
     }
