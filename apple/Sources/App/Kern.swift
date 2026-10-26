@@ -62,7 +62,7 @@ final class Kern {
     }
 
     /// Eine Aktion ausführen, danach neu laden; Fehler als Meldung
-    private func aktion(_ erfolg: String = "", _ arbeit: @escaping () async throws -> Void) async -> Bool {
+    private func aktion(erfolg: String = "", _ arbeit: @escaping () async throws -> Void) async -> Bool {
         do {
             try await arbeit()
             if !erfolg.isEmpty { meldung = erfolg }
@@ -78,7 +78,7 @@ final class Kern {
 
     func hinzufuegen(nummer: String, dienst: String, name: String) async -> Bool {
         let ha = ha
-        return await aktion(T("Hinzugefügt")) { try await ha.hinzufuegen(nummer: nummer, dienst: dienst, name: name) }
+        return await aktion(erfolg: T("Hinzugefügt")) { try await ha.hinzufuegen(nummer: nummer, dienst: dienst, name: name) }
     }
 
     func entfernen(_ s: Sendung) async {
