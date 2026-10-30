@@ -1,7 +1,4 @@
 import Foundation
-#if os(iOS)
-import UIKit
-#endif
 
 /// Fehler beim Gespräch mit Home Assistant – mit Text für die Anzeige
 public struct HAFehler: Error, Equatable, Sendable {
@@ -37,11 +34,11 @@ public struct HomeAssistant: Sendable {
 
     public var eingerichtet: Bool { !basis.isEmpty && !token.isEmpty }
 
-    func anfrage(_ pfad: String, methode: String = "GET", koerper: [String: Any]? = nil) async throws -> Data {
+    func anfrage(_ pfad: String, methode: String = "GET", koerper: [String: Any]? = nil, zeit: TimeInterval = 20) async throws -> Data {
         guard eingerichtet, let url = URL(string: basis + pfad) else { throw HAFehler(status: -1) }
         var r = URLRequest(url: url)
         r.httpMethod = methode
-        r.timeoutInterval = 20
+        r.timeoutInterval = zeit
         r.setValue("Bearer " + token, forHTTPHeaderField: "Authorization")
         r.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if let koerper { r.httpBody = try? JSONSerialization.data(withJSONObject: koerper) }
@@ -53,8 +50,9 @@ public struct HomeAssistant: Sendable {
     }
 
     /// Alle Sendungen (des gewählten Postfachs)
-    public func laden() async throws -> Uebersicht {
-        let d = try await anfrage("/api/briefankuendigung/briefe")
+    /// zeit: höchstens so lange warten (Widgets haben nur wenige Sekunden)
+    public func laden(zeit: TimeInterval = 20) async throws -> Uebersicht {
+        let d = try await anfrage("/api/briefankuendigung/briefe", zeit: zeit)
         guard let j = JSON.lesen(d), let u = Uebersicht.aus(j) else { throw HAFehler(status: -2) }
         return u.nur(konto: konto)
     }
@@ -118,18 +116,10 @@ public enum Ablage {
 
     static var datei: URL { ordner.appendingPathComponent("sendungen.json") }
 
-    /// Ersatzweg ohne App-Gruppe (z. B. nach dem Neu-Signieren mit Signulous): eine benannte Zwischenablage,
-    /// die nur Apps desselben Teams lesen können. Darin liegt nur der Stand der Sendungen – kein Token.
-    public static let ablageName = "de.teyro.paketbote.stand"
-
     public static func lesen() -> Uebersicht? {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .secondsSince1970
         if let d = try? Data(contentsOf: datei), let u = try? dec.decode(Uebersicht.self, from: d) { return u }
-        #if os(iOS)
-        if !gruppeDa, let p = UIPasteboard(name: UIPasteboard.Name(ablageName), create: false),
-           let d = p.data(forPasteboardType: "public.json"), let u = try? dec.decode(Uebersicht.self, from: d) { return u }
-        #endif
         return nil
     }
 
@@ -139,11 +129,6 @@ public enum Ablage {
         guard let d = try? enc.encode(u) else { return }
         try? FileManager.default.createDirectory(at: ordner, withIntermediateDirectories: true)
         try? d.write(to: datei, options: .atomic)
-        #if os(iOS)
-        if !gruppeDa, let p = UIPasteboard(name: UIPasteboard.Name(ablageName), create: true) {
-            p.setData(d, forPasteboardType: "public.json")
-        }
-        #endif
     }
 
     /// Zugang für Widgets und Kurzbefehle auf dem iPhone (in der App-Gruppe; auf dem Mac im Schlüsselbund der App)

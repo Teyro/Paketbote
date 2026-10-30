@@ -45,6 +45,7 @@ struct Eintrag: TimelineEntry {
 
 struct Zeitleiste: AppIntentTimelineProvider {
     private func gespeichert() -> Eintrag {
+        // nur die eigene Ablage des Widgets (bzw. die App-Gruppe) – nichts, was blockieren könnte
         let u = Ablage.lesen()
         return Eintrag(date: Date(), daten: WidgetDaten(uebersicht: u, eingerichtet: u != nil || Ablage.zugang.eingerichtet))
     }
@@ -57,28 +58,49 @@ struct Zeitleiste: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: WidgetZugang, in context: Context) async -> Eintrag {
-        var e = gespeichert()
-        e.daten.inhalt = configuration.inhalt.rawValue
-        return e
+        // in der Widget-Auswahl reicht der gespeicherte Stand; sonst gleich frisch laden
+        if context.isPreview {
+            var e = gespeichert()
+            e.daten.inhalt = configuration.inhalt.rawValue
+            return e
+        }
+        return await aktuell(configuration)
     }
 
     func timeline(for configuration: WidgetZugang, in context: Context) async -> Timeline<Eintrag> {
+        let e = await aktuell(configuration)
+        // um Mitternacht neu (für „kommt heute“), sonst alle 30 Minuten (nach einem Fehler schon nach 10)
+        let mitternacht = Calendar.current.startOfDay(for: Date().addingTimeInterval(86400))
+        let naechstes = Date().addingTimeInterval(e.daten.fehler.isEmpty ? 1800 : 600)
+        return Timeline(entries: [e], policy: .after(min(naechstes, mitternacht)))
+    }
+
+    private func aktuell(_ configuration: WidgetZugang) async -> Eintrag {
         var e = gespeichert()
-        // Zugang: aus der App (App-Gruppe) oder aus den Einstellungen des Widgets
+        // Zugang: aus den Einstellungen des Widgets (ohne App-Gruppe, z. B. nach Signulous) oder aus der App
         var ha = Ablage.zugang
-        if !ha.eingerichtet, let a = configuration.adresse, let t = configuration.token, !a.isEmpty, !t.isEmpty {
+        if let a = configuration.adresse?.trimmingCharacters(in: .whitespacesAndNewlines),
+           let t = configuration.token?.trimmingCharacters(in: .whitespacesAndNewlines), !a.isEmpty, !t.isEmpty {
             ha = HomeAssistant(adresse: a, token: t, konto: configuration.konto ?? "")
         }
-        if ha.eingerichtet, var u = try? await ha.laden() {
-            // direkt verfolgte Sendungen aus dem letzten Stand der App behalten
-            let direkt = (e.daten.uebersicht?.sendungen ?? []).filter { $0.quelle == "direkt" }
-            u.sendungen = zusammenfuehren(ha: u.sendungen, direkt: direkt)
-            e = Eintrag(date: Date(), daten: WidgetDaten(uebersicht: u, eingerichtet: true))
+        if ha.eingerichtet {
+            do {
+                var u = try await ha.laden(zeit: 12)
+                // direkt verfolgte Sendungen aus dem letzten Stand der App behalten
+                let direkt = (e.daten.uebersicht?.sendungen ?? []).filter { $0.quelle == "direkt" }
+                u.sendungen = zusammenfuehren(ha: u.sendungen, direkt: direkt)
+                e = Eintrag(date: Date(), daten: WidgetDaten(uebersicht: u, eingerichtet: true))
+                Ablage.schreiben(u)
+            } catch let f as HAFehler {
+                e.daten.eingerichtet = true
+                e.daten.fehler = f.text
+            } catch {
+                e.daten.eingerichtet = true
+                e.daten.fehler = error.localizedDescription
+            }
         }
         e.daten.inhalt = configuration.inhalt.rawValue
-        // um Mitternacht neu (für „kommt heute“), sonst alle 30 Minuten
-        let mitternacht = Calendar.current.startOfDay(for: Date().addingTimeInterval(86400))
-        return Timeline(entries: [e], policy: .after(min(Date().addingTimeInterval(1800), mitternacht)))
+        return e
     }
 }
 

@@ -25,6 +25,8 @@ struct WidgetDaten {
     var jetzt = Date()
     /// "alle" | "briefe" | "pakete"
     var inhalt = "alle"
+    /// Fehler beim Laden (wird statt der Liste gezeigt, wenn nichts da ist)
+    var fehler = ""
 
     var gruppen: Gruppen { inhalt == "briefe" ? Gruppen() : Gruppen(uebersicht?.sendungen ?? [], jetzt: jetzt) }
     var briefe: BriefGruppen { inhalt == "pakete" ? BriefGruppen() : BriefGruppen(uebersicht?.briefe ?? [], jetzt: jetzt) }
@@ -79,13 +81,16 @@ struct WidgetLeer: View {
     var body: some View {
         VStack(spacing: 6) {
             Spacer(minLength: 0)
-            Image(systemName: !daten.eingerichtet ? "gearshape" : daten.inhalt == "briefe" ? "envelope" : "shippingbox")
+            Image(systemName: !daten.eingerichtet ? "gearshape" : !daten.fehler.isEmpty ? "wifi.exclamationmark" : daten.inhalt == "briefe" ? "envelope" : "shippingbox")
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(.secondary)
-            Text(!daten.eingerichtet ? (Ablage.gruppeDa ? T("App öffnen und einrichten") : T("Widget lange drücken → „Widget bearbeiten“ → Home Assistant eintragen")) : daten.titel)
+            Text(!daten.eingerichtet ? (Ablage.gruppeDa ? T("App öffnen und einrichten") : T("Widget lange drücken → „Widget bearbeiten“ → Home Assistant eintragen"))
+                 : !daten.fehler.isEmpty ? daten.fehler : daten.titel)
                 .font(.system(size: 12, weight: .medium))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
+                .lineLimit(4)
+                .minimumScaleFactor(0.8)
             if let z = daten.gruppen.zugestellt.first {
                 Text(T("Zuletzt: %1", z.titel)).font(.system(size: 10)).foregroundStyle(.tertiary).lineLimit(1)
             }
