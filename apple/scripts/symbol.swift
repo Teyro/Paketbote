@@ -30,22 +30,22 @@ func bild(_ px: Int, mac: Bool) -> Data {
     NSGraphicsContext.current?.restoreGraphicsState()
     NSGradient(colors: [NSColor.white.withAlphaComponent(0.25), NSColor.white.withAlphaComponent(0)])!.draw(in: form, angle: -90)
     // Brief (hinten, leicht gedreht) und Paket (vorn rechts) – „Post & Pakete“
-    let brief = NSImage.SymbolConfiguration(pointSize: s * 0.36, weight: .semibold).applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
+    let brief = NSImage.SymbolConfiguration(pointSize: s * 0.24, weight: .semibold).applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
     if let sym = NSImage(systemSymbolName: "envelope.fill", accessibilityDescription: nil)?.withSymbolConfiguration(brief), let ctx = NSGraphicsContext.current?.cgContext {
         let g = sym.size
         ctx.saveGState()
-        ctx.translateBy(x: s * 0.4, y: s * 0.58)
+        ctx.translateBy(x: s * 0.42, y: s * 0.58)
         ctx.rotate(by: 8 * .pi / 180)
         sym.draw(in: NSRect(x: -g.width / 2, y: -g.height / 2, width: g.width, height: g.height))
         ctx.restoreGState()
     }
     // Paket mit dunklem Rand, damit es sich vom Brief abhebt
-    let umriss = NSImage.SymbolConfiguration(pointSize: s * 0.36, weight: .black).applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(red: 0.12, green: 0.25, blue: 0.72, alpha: 1)]))
-    let paket = NSImage.SymbolConfiguration(pointSize: s * 0.32, weight: .semibold)
+    let umriss = NSImage.SymbolConfiguration(pointSize: s * 0.245, weight: .black).applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(red: 0.12, green: 0.25, blue: 0.72, alpha: 1)]))
+    let paket = NSImage.SymbolConfiguration(pointSize: s * 0.22, weight: .semibold)
         .applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1)]))
     if let r = NSImage(systemSymbolName: "shippingbox.fill", accessibilityDescription: nil)?.withSymbolConfiguration(umriss),
        let p = NSImage(systemSymbolName: "shippingbox.fill", accessibilityDescription: nil)?.withSymbolConfiguration(paket) {
-        let mitte = NSPoint(x: s * 0.62, y: s * 0.36)
+        let mitte = NSPoint(x: s * 0.6, y: s * 0.4)
         r.draw(in: NSRect(x: mitte.x - r.size.width / 2, y: mitte.y - r.size.height / 2, width: r.size.width, height: r.size.height))
         p.draw(in: NSRect(x: mitte.x - p.size.width / 2, y: mitte.y - p.size.height / 2, width: p.size.width, height: p.size.height))
     }
