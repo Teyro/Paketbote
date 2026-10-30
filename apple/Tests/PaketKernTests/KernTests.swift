@@ -20,7 +20,8 @@ final class KernTests: XCTestCase {
             ["id": "p3", "datum": ms(jetzt), "art": "paket", "absender": "Kindle", "name": "Geschenk Oma", "dienst": "amazon", "erwartet": "2026-10-22",
              "kundenkonto": "Johanna", "manuell": true, "konto": "e1"],
             ["id": "p4", "datum": ms(jetzt), "art": "paket", "absender": "Alt", "stand": "zugestellt", "konto": "e1"],
-            ["id": "p5", "datum": ms(jetzt), "art": "paket", "absender": "Kaffee", "stand": "abholbereit", "dienst": "gls", "konto": "e1"],
+            ["id": "p5", "datum": ms(jetzt), "art": "paket", "absender": "Kaffee", "stand": "abholbereit", "dienst": "gls", "konto": "e1",
+             "abholcode": "482913", "abholort": "Packstation 123", "abholadresse": "Hachmannplatz 16, 20099 Hamburg", "abholfrist": "2026-10-28"],
             ["id": "b1", "datum": ms(jetzt), "art": "brief", "absender": "AOK"],
         ]]
         return Uebersicht.aus(j)!
@@ -108,5 +109,28 @@ final class BriefTests: XCTestCase {
         let alt = #"{"sendungen":[],"konten":[],"fehler":"","version":4,"geholt":0}"#
         let dec = JSONDecoder(); dec.dateDecodingStrategy = .secondsSince1970
         XCTAssertEqual(try dec.decode(Uebersicht.self, from: Data(alt.utf8)).briefe.count, 0)
+    }
+
+    func testAbholenUndRueckgabe() throws {
+        let u = beispiel()
+        let kaffee = u.sendungen[4]
+        XCTAssertTrue(kaffee.zumAbholen)
+        XCTAssertEqual(kaffee.abholcode, "482913")
+        XCTAssertEqual(kaffee.abholort, "Packstation 123")
+        XCTAssertFalse(u.sendungen[0].zumAbholen)
+        XCTAssertNil(kaffee.rueckgabeBis, "erst nach der Zustellung")
+        // Shop-Regel: Zalando 100 Tage, unbekannter Shop keine Frist
+        let zu = kal.date(from: DateComponents(year: 2026, month: 10, day: 27, hour: 16))!
+        XCTAssertEqual(Rueckgabe.frist(shop: "Zalando SE", dienst: "dpd", zugestellt: zu, kalender: kal),
+                       kal.date(from: DateComponents(year: 2027, month: 2, day: 4)))
+        XCTAssertNil(Rueckgabe.frist(shop: "Fahrradladen Nord", dienst: "ups", zugestellt: zu, kalender: kal))
+        XCTAssertNotNil(Rueckgabe.frist(shop: "", dienst: "amazon", zugestellt: zu, kalender: kal))
+        // ältere gespeicherte Sendungen ohne die neuen Felder bleiben lesbar
+        let daten = try JSONEncoder().encode(kaffee)
+        var j = try XCTUnwrap(JSONSerialization.jsonObject(with: daten) as? [String: Any])
+        for k in ["abholcode", "abholort", "abholadresse", "abholfrist", "ruecksendefrist"] { j.removeValue(forKey: k) }
+        let alt = try JSONDecoder().decode(Sendung.self, from: JSONSerialization.data(withJSONObject: j))
+        XCTAssertEqual(alt.id, "p5")
+        XCTAssertEqual(alt.abholcode, "")
     }
 }

@@ -11,6 +11,7 @@ struct PaketAktivitaet: ActivityAttributes {
         var standText: String
         var stufe: Int
         var zeitfenster: String
+        var abholcode: String = ""
     }
     var id: String
     var titel: String
@@ -28,6 +29,12 @@ struct PaketAktivitaetWidget: Widget {
                     StufenBalken(stufe: k.state.stufe)
                 }
                 Spacer(minLength: 0)
+                if !k.state.abholcode.isEmpty {
+                    VStack(spacing: 0) {
+                        Text(T("Abholcode")).font(.caption2).foregroundStyle(.secondary)
+                        Text(k.state.abholcode).font(.system(size: 22, weight: .bold, design: .monospaced))
+                    }
+                }
             }
             .padding(14)
             .activityBackgroundTint(Color(.systemBackground).opacity(0.85))
@@ -41,11 +48,14 @@ struct PaketAktivitaetWidget: Widget {
                         Text(k.state.standText).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }
+                DynamicIslandExpandedRegion(.trailing) {
+                    if !k.state.abholcode.isEmpty { Text(k.state.abholcode).font(.system(size: 18, weight: .bold, design: .monospaced)) }
+                }
                 DynamicIslandExpandedRegion(.bottom) { StufenBalken(stufe: k.state.stufe).padding(.horizontal, 6) }
             } compactLeading: {
                 Image(systemName: "shippingbox.fill").foregroundStyle(Color(Dienst.farben(k.attributes.dienst).hintergrund))
             } compactTrailing: {
-                Text(k.state.stand == "abholbereit" ? T("Abholen") : k.state.zeitfenster.isEmpty ? T("Heute") : k.state.zeitfenster)
+                Text(!k.state.abholcode.isEmpty ? k.state.abholcode : k.state.stand == "abholbereit" ? T("Abholen") : k.state.zeitfenster.isEmpty ? T("Heute") : k.state.zeitfenster)
                     .font(.caption2.weight(.semibold))
             } minimal: {
                 Image(systemName: "shippingbox.fill")

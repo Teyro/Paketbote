@@ -24,7 +24,9 @@ struct DetailAnsicht: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 kopf
-                if !sendung.ereignisse.filter({ !$0.ort.isEmpty }).isEmpty {
+                if sendung.zumAbholen { AbholKarte(kern: kern, sendung: sendung) }
+                if let bis = sendung.rueckgabeBis, bis >= Calendar.current.startOfDay(for: Date()) { RueckgabeKarte(kern: kern, sendung: sendung, bis: bis) }
+                if !sendung.zumAbholen && !sendung.ereignisse.filter({ !$0.ort.isEmpty }).isEmpty {
                     StationenKarte(ereignisse: sendung.ereignisse)
                         .frame(height: 220)
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -124,6 +126,9 @@ struct DetailAnsicht: View {
                     Button { Zwischenablage.kopieren(sendung.nummer); kern.meldung = T("Nummer kopiert") } label: {
                         Label(T("Nummer kopieren"), systemImage: "doc.on.doc")
                     }
+                }
+                if !sendung.fertig, let u = Dienst.paketsteuerung(sendung.dienst, sendung.nummer) {
+                    Link(destination: u) { Label(T("Zustellung umleiten (Nachbar, Ablageort) …"), systemImage: "arrow.triangle.branch") }
                 }
                 if sendung.manuell {
                     Button(role: .destructive) { Task { await kern.entfernen(sendung) } } label: { Label(T("Entfernen"), systemImage: "trash") }
@@ -306,4 +311,88 @@ enum FotoAblage {
     }
 
     static func loeschen(_ id: String) { try? FileManager.default.removeItem(at: DirektListe.foto(id)) }
+}
+
+/// Abholen: Code groß (zum Abtippen an der Packstation), Abholstelle mit Karte und Route, Frist
+struct AbholKarte: View {
+    let kern: Kern
+    let sendung: Sendung
+    @State private var ziel: CLLocationCoordinate2D?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(T("Zur Abholung bereit"), systemImage: "shippingbox.and.arrow.backward").font(.headline).foregroundStyle(.orange)
+            if !sendung.abholcode.isEmpty {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(T("Abholcode")).font(.caption).foregroundStyle(.secondary)
+                        Text(sendung.abholcode)
+                            .font(.system(size: 40, weight: .bold, design: .monospaced))
+                            .kerning(4)
+                            .textSelection(.enabled)
+                    }
+                    Spacer()
+                    Button { Zwischenablage.kopieren(sendung.abholcode); kern.meldung = T("Abholcode kopiert") } label: {
+                        Label(T("Kopieren"), systemImage: "doc.on.doc")
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+            if !sendung.abholort.isEmpty || !sendung.abholadresse.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    if !sendung.abholort.isEmpty { Text(sendung.abholort).font(.body.weight(.semibold)) }
+                    if !sendung.abholadresse.isEmpty { Text(sendung.abholadresse).foregroundStyle(.secondary).textSelection(.enabled) }
+                }
+            }
+            if let frist = Texte.tagAus(sendung.abholfrist) {
+                Label(T("Abholen bis %1", Texte.kurzTag(frist)), systemImage: "clock").font(.callout.weight(.medium))
+                    .foregroundStyle(frist.timeIntervalSinceNow < 86400 * 2 ? Color.red : Color.primary)
+            }
+            if let ziel {
+                Map(initialPosition: .region(MKCoordinateRegion(center: ziel, latitudinalMeters: 900, longitudinalMeters: 900))) {
+                    Marker(sendung.abholort.isEmpty ? T("Abholstelle") : sendung.abholort, systemImage: "shippingbox.fill", coordinate: ziel).tint(.orange)
+                }
+                .frame(height: 170)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            if !sendung.abholadresse.isEmpty {
+                Button { route() } label: { Label(T("Route zur Abholstelle"), systemImage: "arrow.triangle.turn.up.right.diamond.fill").frame(maxWidth: .infinity) }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .task(id: sendung.abholadresse) {
+            guard !sendung.abholadresse.isEmpty else { return }
+            ziel = await Orte.koordinate(sendung.abholadresse)
+        }
+    }
+
+    private func route() {
+        let ort = (sendung.abholort.isEmpty ? "" : sendung.abholort + ", ") + sendung.abholadresse
+        let q = ort.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let u = URL(string: "https://maps.apple.com/?daddr=\(q)&dirflg=w") { kern.oeffnen(u) }
+    }
+}
+
+/// Rückgabefrist eines zugestellten Pakets mit Erinnerung
+struct RueckgabeKarte: View {
+    let kern: Kern
+    let sendung: Sendung
+    let bis: Date
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.uturn.backward.circle.fill").font(.title2).foregroundStyle(.purple)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(T("Rückgabe bis %1", Texte.kurzTag(bis))).font(.headline)
+                Text(T("Rücksendefrist laut Shop (ohne Gewähr)")).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button(T("Erinnern")) { Task { await kern.rueckgabeErinnern(sendung, bis: bis) } }.buttonStyle(.bordered)
+        }
+        .padding()
+        .background(Color.purple.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
 }

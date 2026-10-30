@@ -8,7 +8,7 @@
         "Id": "de.teyro.paketbote",
         "License": "GPL-3.0-or-later",
         "Name": "Post & Pakete",
-        "Version": "2.0.1",
+        "Version": "2.1.0",
         "Website": "https://github.com/Teyro/Post-und-Pakete"
     },
     "KPackageStructure": "Plasma/Applet",

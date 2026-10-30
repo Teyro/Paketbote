@@ -6,6 +6,11 @@ import WidgetKit
 import Security
 import EventKit
 import PaketKern
+#if canImport(UIKit)
+import UIKit
+#else
+import AppKit
+#endif
 
 /// Zustand der App: Zugang, Sendungen (aus Home Assistant und direkt verfolgt), Aktionen. Gemeinsam für iPhone und Mac.
 @MainActor
@@ -110,6 +115,7 @@ final class Kern {
         if einstellungen.mitteilungen && !vorher.isEmpty { await melden(alt: vorher, neu: alle) }
         if einstellungen.mitteilungen && !ersterAbruf { await briefeMelden(neu: briefGruppen.heute.filter { !vorherBriefe.contains($0.id) }) }
         Umschlaege.aufraeumen(behalten: Set(briefe.map(\.id)))
+        if einstellungen.rueckgabeErinnern && !vorschau { await rueckgabenErinnern() }
         widgetsSchreiben()
         nachLaden(self)
     }
@@ -284,6 +290,37 @@ final class Kern {
         _ = await aktion { try await ha.erledigt(b.id, ja) }
     }
 
+    /// Link öffnen (Route, Paketsteuerung)
+    func oeffnen(_ url: URL) {
+        #if canImport(UIKit)
+        UIApplication.shared.open(url)
+        #else
+        NSWorkspace.shared.open(url)
+        #endif
+    }
+
+    /// Erinnerung an die Rücksendefrist (zwei Tage vorher, morgens)
+    func rueckgabeErinnern(_ s: Sendung, bis: Date) async {
+        let vorher = Calendar.current.date(byAdding: .day, value: -2, to: bis) ?? bis
+        let tage = max(0, Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: vorher).day ?? 0)
+        await erinnern(titel: T("Rückgabe: %1", s.titel), notiz: T("Rücksendefrist bis %1 (laut Shop, ohne Gewähr).", Texte.kurzTag(bis))
+                       + (s.nummer.isEmpty ? "" : "\n" + T("Sendung %1", s.nummer)), in: tage)
+    }
+
+    /// Frisch zugestellte Pakete mit bekannter Rücksendefrist: einmal automatisch erinnern
+    private func rueckgabenErinnern() async {
+        let d = UserDefaults.standard
+        var erledigt = Set(d.stringArray(forKey: "rueckgabeErinnert") ?? [])
+        let erstesMal = d.object(forKey: "rueckgabeErinnert") == nil
+        for s in alle where s.stand == "zugestellt" && Date().timeIntervalSince(s.datum) < 3 * 86400 && !erledigt.contains(s.id) {
+            guard let bis = s.rueckgabeBis, bis > Date() else { continue }
+            erledigt.insert(s.id)
+            // beim ersten Start nicht für alle alten Pakete auf einmal
+            if !erstesMal { await rueckgabeErinnern(s, bis: bis) }
+        }
+        d.set(Array(erledigt.suffix(300)), forKey: "rueckgabeErinnert")
+    }
+
     /// Erinnerung in der Erinnerungen-App (z. B. „Brief vom Finanzamt beantworten“)
     func erinnern(titel: String, notiz: String, in tage: Int) async {
         let ek = EKEventStore()
@@ -342,6 +379,8 @@ final class Einstellungen {
     var liveAktivitaet: Bool { didSet { d.set(liveAktivitaet, forKey: "liveAktivitaet") } }
     /// Was die Liste zeigt: "alle" | "briefe" | "pakete"
     var bereich: String { didSet { d.set(bereich, forKey: "bereich") } }
+    /// Nach der Zustellung automatisch an die Rücksendefrist erinnern
+    var rueckgabeErinnern: Bool { didSet { d.set(rueckgabeErinnern, forKey: "rueckgabeErinnern") } }
     var token: String {
         didSet {
             guard !vorschau else { return }
@@ -358,7 +397,7 @@ final class Einstellungen {
 
     init(vorschau: Bool) {
         self.vorschau = vorschau
-        d.register(defaults: ["mitteilungen": true, "tageZugestellt": 14, "auchInHA": true, "direktModus": false, "liveAktivitaet": true])
+        d.register(defaults: ["mitteilungen": true, "tageZugestellt": 14, "auchInHA": true, "direktModus": false, "liveAktivitaet": true, "rueckgabeErinnern": true])
         adresse = vorschau ? "" : d.string(forKey: "adresse") ?? ""
         konto = vorschau ? "" : d.string(forKey: "konto") ?? ""
         mitteilungen = d.bool(forKey: "mitteilungen")
@@ -367,6 +406,7 @@ final class Einstellungen {
         direktModus = d.bool(forKey: "direktModus")
         liveAktivitaet = d.bool(forKey: "liveAktivitaet")
         bereich = d.string(forKey: "bereich") ?? "alle"
+        rueckgabeErinnern = d.bool(forKey: "rueckgabeErinnern")
         // bis 1.0 lag der Token auf dem iPhone in den Einstellungen
         let alt = d.string(forKey: "token") ?? ""
         token = vorschau ? "" : Schluesselbund.lesen(konto: "token") ?? alt

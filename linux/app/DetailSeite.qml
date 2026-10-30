@@ -33,6 +33,13 @@ Kirigami.ScrollablePage {
             onTriggered: seite.ha.erledigt(seite.sendung.id, !seite.sendung.erledigt)
         },
         Kirigami.Action {
+            text: S.t("Zustellung umleiten (Nachbar, Ablageort) …")
+            icon.name: "go-jump"
+            displayHint: Kirigami.DisplayHint.AlwaysHide
+            visible: !!seite.sendung && !Logik.fertig(seite.sendung) && Logik.paketsteuerung(seite.sendung) !== ""
+            onTriggered: Qt.openUrlExternally(Logik.paketsteuerung(seite.sendung))
+        },
+        Kirigami.Action {
             text: S.t("Umbenennen")
             icon.name: "edit-rename"
             displayHint: Kirigami.DisplayHint.AlwaysHide

@@ -20,7 +20,12 @@
 "17TRACK-Schlüssel (200 Sendungen frei)" = "17TRACK key (200 shipments free)";
 "Abbrechen" = "Cancel";
 "Abfrage über %1." = "Tracked via %1.";
+"Abholcode" = "Pickup code";
+"Abholcode %1" = "Pickup code %1";
+"Abholcode kopiert" = "Pickup code copied";
 "Abholen" = "Pick up";
+"Abholen bis %1" = "Pick up by %1";
+"Abholstelle" = "Pickup point";
 "Absender unbekannt" = "Unknown sender";
 "Adresse" = "Address";
 "Adresse, z. B. http://homeassistant.local:8123" = "Address, e.g. http://homeassistant.local:8123";
@@ -143,6 +148,7 @@
 "kommt heute" = "arrives today";
 "kommt morgen" = "arrives tomorrow";
 "Kontingent aufgebraucht" = "quota used up";
+"Kopieren" = "Copy";
 "Kundenkonto" = "Customer account";
 "Lade das Archiv …" = "Loading the archive …";
 "Langlebiges Zugriffstoken" = "Long-lived access token";
@@ -157,8 +163,10 @@
 "Mitteilungen bei neuem Stand" = "Notify on status changes";
 "Mo" = "Mon";
 "Monat" = "Month";
+"morgen" = "tomorrow";
 "Morgen erinnern" = "Remind tomorrow";
 "Morgen früh" = "Tomorrow morning";
+"Nach der Zustellung an die Rücksendefrist erinnern" = "Remind me of the return deadline after delivery";
 "Nach Updates suchen" = "Check for updates";
 "Nach Updates suchen …" = "Check for updates …";
 "Name" = "Name";
@@ -203,6 +211,12 @@
 "Postfach jetzt lesen" = "Check mailbox now";
 "Problem bei der Zustellung" = "Delivery problem";
 "Quelle" = "Source";
+"Route starten" = "Start route";
+"Route zur Abholstelle" = "Route to pickup point";
+"Rückgabe bis %1" = "Return by %1";
+"Rückgabe: %1" = "Return: %1";
+"Rücksendefrist bis %1 (laut Shop, ohne Gewähr)." = "Return deadline %1 (per shop policy, no guarantee).";
+"Rücksendefrist laut Shop (ohne Gewähr)" = "Return deadline per shop policy (no guarantee)";
 "Rücksendung" = "Return";
 "Sa" = "Sat";
 "Schlüssel" = "Key";
@@ -264,4 +278,6 @@
 "Zugriff verweigert – bitte den Token prüfen." = "Access denied – please check the token.";
 "Zuletzt: %1" = "Last: %1";
 "zur Abholung bereit" = "ready for pickup";
+"Zur Abholung bereit" = "Ready for pickup";
 "Zur Abholung bereit: %1." = "Ready for pickup: %1.";
+"Zustellung umleiten (Nachbar, Ablageort) …" = "Redirect delivery (neighbour, drop-off spot) …";

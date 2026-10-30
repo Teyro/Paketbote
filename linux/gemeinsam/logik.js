@@ -56,6 +56,8 @@ function sendungenAus(antwort) {
             erwartet: b.erwartet || "", zeitfenster: b.zeitfenster || "", kundenkonto: b.kundenkonto || "", verfolgen: b.verfolgen || "",
             manuell: !!b.manuell, statusText: b.status_text || "", problem: !!b.problem, erledigt: !!b.erledigt,
             kontoId: b.konto || "", kontoName: b.konto_name || "", anbieter: b.anbieter || "", quelle: "ha", ruecksendung: !!b.ruecksendung,
+            abholcode: b.abholcode || "", abholort: b.abholort || "", abholadresse: b.abholadresse || "", abholfrist: b.abholfrist || "",
+            ruecksendefrist: b.ruecksendefrist || "",
             ereignisse: (b.ereignisse || []).filter(function (e) { return e && e.text; })
                 .map(function (e) { return { zeit: e.zeit ? Date.parse(e.zeit) || 0 : 0, text: e.text, ort: e.ort || "" }; })
         };
@@ -127,9 +129,73 @@ function standText(s, jetzt) {
     return s.ereignisse && s.ereignisse.length ? t("unterwegs") : t("angekündigt");
 }
 
+/** Paket liegt zum Abholen bereit und wir kennen Code oder Ort */
+function zumAbholen(s) {
+    return s.stand === "abholbereit" && !s.erledigt && !!(s.abholcode || s.abholort || s.abholadresse);
+}
+
+/** Rückgabefristen bekannter Shops in Tagen ab Zustellung */
+var RUECKGABE = [["zalando", 100], ["about you", 100], ["aboutyou", 100], ["ikea", 365], ["decathlon", 365], ["tchibo", 30], ["otto", 30],
+    ["amazon", 30], ["h&m", 30], ["hm.com", 30], ["mediamarkt", 30], ["media markt", 30], ["saturn", 30], ["thalia", 14], ["lidl", 30],
+    ["bonprix", 30], ["baur", 30], ["galeria", 30], ["esprit", 30], ["c&a", 30], ["zara", 30], ["mango", 30], ["asos", 28], ["shein", 45],
+    ["temu", 90], ["apple", 14], ["notebooksbilliger", 30], ["alternate", 14], ["cyberport", 14], ["conrad", 30], ["douglas", 30],
+    ["flaconi", 30]];
+
+function tagAus(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || "");
+    return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : 0;
+}
+
+/** Ms des letzten Rückgabetags oder 0 */
+function rueckgabeBis(s) {
+    if (!fertig(s) || s.ruecksendung) return 0;
+    var d = tagAus(s.ruecksendefrist);
+    if (d) return d;
+    var shop = String(s.name || s.absender || "").toLowerCase(), n = 0;
+    for (var i = 0; i < RUECKGABE.length && !n; i++) if (shop.indexOf(RUECKGABE[i][0]) >= 0) n = RUECKGABE[i][1];
+    if (!n && s.dienst === "amazon") n = 30;
+    if (!n) return 0;
+    var zu = (s.ereignisse || []).reduce(function (m, e) { return Math.max(m, e.zeit || 0); }, 0) || s.datum;
+    if (!zu) return 0;
+    var z = new Date(zu);
+    return new Date(z.getFullYear(), z.getMonth(), z.getDate() + n).getTime();
+}
+
+/** „heute“, „morgen“, „Fr 7.11.“, „7.11.“ */
+function kurzTag(ms, jetzt) {
+    var d = new Date(ms), h = new Date(jetzt);
+    var tage = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(h.getFullYear(), h.getMonth(), h.getDate())) / 86400000);
+    var tm = d.getDate() + "." + (d.getMonth() + 1) + ".";
+    if (tage === 0) return t("heute");
+    if (tage === 1) return t("morgen");
+    return tage > 1 && tage < 7 ? t(TAGE[d.getDay()]) + " " + tm : tm;
+}
+
+/** Rückgabefrist noch offen (heute oder später)? */
+function rueckgabeOffen(s, jetzt) {
+    var b = rueckgabeBis(s), h = new Date(jetzt);
+    return b > 0 && b >= new Date(h.getFullYear(), h.getMonth(), h.getDate()).getTime();
+}
+
+/** Wunschnachbar/Ablageort beim Dienst einstellen */
+function paketsteuerung(s) {
+    var n = encodeURIComponent(s.nummer || "");
+    if (s.dienst === "hermes") return "https://www.myhermes.de/empfangen/zustelloptionen/";
+    if (s.dienst === "dpd") return "https://my.dpd.de/redirect.aspx?action=1&pno=" + n;
+    if (s.dienst === "amazon") return "https://www.amazon.de/gp/css/order-history";
+    return verfolgenAdresse(s);
+}
+
+/** Route zur Abholstelle (OpenStreetMap, zu Fuß) */
+function routeAdresse(s) {
+    var ziel = [s.abholort, s.abholadresse].filter(function (x) { return x; }).join(", ");
+    return "https://www.openstreetmap.org/directions?engine=fossgis_osrm_foot&to=" + encodeURIComponent(ziel);
+}
+
 /** Stand · Kundenkonto (bzw. Postfach) */
 function zeile(s, jetzt, mitKonto) {
-    var teile = [standText(s, jetzt)];
+    var teile = [zumAbholen(s) && s.abholcode ? t("Abholcode %1", s.abholcode) + (s.abholort ? " · " + s.abholort : "") : standText(s, jetzt)];
+    if (fertig(s) && rueckgabeOffen(s, jetzt)) teile.push(t("Rückgabe bis %1", kurzTag(rueckgabeBis(s), jetzt)));
     if (s.kundenkonto) teile.push(s.kundenkonto); else if (mitKonto && s.kontoName) teile.push(s.kontoName);
     return teile.join(" · ");
 }
@@ -154,6 +220,9 @@ function mitteilung(alt, neu) {
     if (neu.problem && !(alt && alt.problem)) return { titel: t("⚠️ Problem mit der Sendung"), text: text + (neu.statusText ? " – " + neu.statusText : "") };
     if (!alt || alt.stand === neu.stand || neu.erledigt) return null;
     var titelText = { heute: t("📦 Kommt heute"), abholbereit: t("📦 Zur Abholung bereit"), zugestellt: t("📦 Zugestellt") }[neu.stand];
+    if (neu.stand === "abholbereit" && zumAbholen(neu))
+        text += " – " + [neu.abholcode ? t("Abholcode %1", neu.abholcode) : "", neu.abholort].filter(function (x) { return x; }).join(" · ");
+    if (neu.stand === "zugestellt" && rueckgabeOffen(neu, Date.now())) text += " – " + t("Rückgabe bis %1", kurzTag(rueckgabeBis(neu), Date.now()));
     return titelText ? { titel: titelText, text: text } : null;
 }
 

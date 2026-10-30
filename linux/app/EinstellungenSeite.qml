@@ -132,7 +132,7 @@ Kirigami.ScrollablePage {
         }
 
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Über") }
-        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: "2.0.1" }
+        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: "2.1.0" }
         Kirigami.UrlButton { Kirigami.FormData.label: S.t("Post & Pakete auf GitHub"); url: "https://github.com/Teyro/Post-und-Pakete" }
         Kirigami.UrlButton { Kirigami.FormData.label: S.t("Integration (HACS)"); url: "https://github.com/Teyro/Briefankuendigung-HA" }
     }

@@ -90,6 +90,8 @@ struct Zeitleiste: AppIntentTimelineProvider {
                 let direkt = (e.daten.uebersicht?.sendungen ?? []).filter { $0.quelle == "direkt" }
                 u.sendungen = zusammenfuehren(ha: u.sendungen, direkt: direkt)
                 e = Eintrag(date: Date(), daten: WidgetDaten(uebersicht: u, eingerichtet: true))
+                e.daten.knoepfe = true
+                WidgetZugangSpeicher.merken(ha)
                 Ablage.schreiben(u)
             } catch let f as HAFehler {
                 e.daten.eingerichtet = true

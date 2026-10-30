@@ -63,5 +63,20 @@ QQC2.ItemDelegate {
                 sendung: zeile.sendung
             }
         }
+        Rectangle {
+            visible: Logik.zumAbholen(zeile.sendung) && !!zeile.sendung.abholcode
+            implicitWidth: code.implicitWidth + Kirigami.Units.largeSpacing * 2
+            implicitHeight: code.implicitHeight + Kirigami.Units.smallSpacing * 2
+            radius: height / 2
+            color: Qt.rgba(Kirigami.Theme.neutralTextColor.r, Kirigami.Theme.neutralTextColor.g, Kirigami.Theme.neutralTextColor.b, 0.18)
+            QQC2.Label {
+                id: code
+                anchors.centerIn: parent
+                text: zeile.sendung.abholcode
+                font.family: "monospace"
+                font.weight: Font.Bold
+                color: zeile.highlighted ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.neutralTextColor
+            }
+        }
     }
 }

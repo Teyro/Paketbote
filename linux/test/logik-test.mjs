@@ -78,4 +78,19 @@ assert.equal(L.briefZeile(br[0], jetzt, false), 'angekündigt heute');
 assert.equal(L.postTitel(bg.offen, g.aktiv), '3 Briefe, 4 Pakete unterwegs');
 assert.equal(L.postTitel([], []), 'Keine Post unterwegs');
 assert.ok(L.bildAdresse(new Uint8Array([0x89, 0x50, 1, 2])).startsWith('data:image/png;base64,iVA'));
+// Abholen und Rückgabe
+const ab = L.sendungenAus({ briefe: [
+  { id: 'a1', datum: jetzt, art: 'paket', absender: 'Kaffee', stand: 'abholbereit', dienst: 'dhl', abholcode: '482913', abholort: 'Packstation 123' },
+  { id: 'a2', datum: jetzt - 6 * 86400000, art: 'paket', absender: 'Zalando SE', stand: 'zugestellt', dienst: 'dpd' },
+  { id: 'a3', datum: jetzt, art: 'paket', absender: 'Fahrradladen', stand: 'zugestellt', dienst: 'ups', ruecksendefrist: '2026-10-22' },
+  { id: 'a4', datum: jetzt, art: 'paket', absender: 'Fahrradladen', stand: 'zugestellt', dienst: 'ups' },
+] });
+assert.ok(L.zumAbholen(ab[0]));
+assert.equal(L.zeile(ab[0], jetzt, false), 'Abholcode 482913 · Packstation 123');
+assert.ok(L.routeAdresse(ab[0]).includes('Packstation%20123'));
+assert.equal(new Date(L.rueckgabeBis(ab[1])).getDate(), 23, 'Zalando 100 Tage');
+assert.ok(L.rueckgabeOffen(ab[1], jetzt));
+assert.equal(L.kurzTag(L.rueckgabeBis(ab[2]), jetzt), 'morgen');
+assert.equal(L.rueckgabeBis(ab[3]), 0, 'unbekannter Shop');
+assert.equal(L.mitteilung(Object.assign({}, ab[0], { stand: 'unterwegs' }), ab[0]).text, 'Kaffee (DHL) – Abholcode 482913 · Packstation 123');
 console.log('logik.js: alle Prüfungen bestanden');

@@ -57,7 +57,8 @@ const POST = {
         { zeit: zeit(40), text: 'Die Sendung wurde vom Absender in der Filiale eingeliefert.', ort: 'Gütersloh' },
       ] }),
     paket({ id: '3'.repeat(20), datum: jetzt - 2 * 3600e3, absender: 'Kaffeebohnen 1 kg', sendung: 'TBA309999999999', stand: 'abholbereit', dienst: 'amazon',
-      kundenkonto: 'Kim', status_text: 'Liegt im Amazon Locker Bahnhof zur Abholung bereit' }),
+      kundenkonto: 'Kim', status_text: 'Liegt im Amazon Locker Bahnhof zur Abholung bereit',
+      abholcode: '482913', abholort: 'Amazon Locker Bahnhof', abholadresse: 'Hachmannplatz 16, 20099 Hamburg', abholfrist: tag(3) }),
     paket({ id: '1'.repeat(20), datum: jetzt - 5 * 3600e3, absender: 'OTTO GmbH & Co KG', name: 'Laufschuhe', sendung: 'H1002345678901234567', dienst: 'hermes',
       erwartet: tag(2), zeitfenster: '10:00–13:00',
       ereignisse: [

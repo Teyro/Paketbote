@@ -4,6 +4,8 @@
 <dict>
 	<!-- Widgets müssen in der Sandbox laufen -->
 	<key>com.apple.security.app-sandbox</key><true/>
+	<!-- mit Adresse und Token im Widget lädt es selbst aus Home Assistant -->
+	<key>com.apple.security.network.client</key><true/>
 	<!-- Nur lesen: den Stand, den die App für die Widgets schreibt -->
 	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
 	<array><string>/Library/Application Support/Paketbote/</string></array>

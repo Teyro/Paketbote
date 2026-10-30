@@ -45,6 +45,49 @@ public struct Sendung: Codable, Hashable, Sendable, Identifiable {
     public var anbieter: String = ""
     /// Rücksendung (eigenes Etikett)
     public var ruecksendung: Bool = false
+    /// Abholen: Code (Packstation, Locker …), Abholstelle, Adresse, Frist ("2026-11-07") – aus den Mails
+    public var abholcode: String = ""
+    public var abholort: String = ""
+    public var abholadresse: String = ""
+    public var abholfrist: String = ""
+    /// Rücksendefrist von Home Assistant ("" = selbst ausrechnen)
+    public var ruecksendefrist: String = ""
+
+    enum CodingKeys: String, CodingKey {
+        case id, datum, absender, name, nummer, dienst, dienstName, stand, erwartet, zeitfenster, kundenkonto, verfolgen, manuell, statusText,
+             problem, erledigt, kontoId, kontoName, ereignisse, quelle, anbieter, ruecksendung, abholcode, abholort, abholadresse, abholfrist,
+             ruecksendefrist
+    }
+
+    // gespeicherte Sendungen älterer Versionen kennen nicht alle Felder – fehlende bleiben leer
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        func t(_ k: CodingKeys) -> String { (try? c.decodeIfPresent(String.self, forKey: k)) ?? nil ?? "" }
+        func j(_ k: CodingKeys) -> Bool { (try? c.decodeIfPresent(Bool.self, forKey: k)) ?? nil ?? false }
+        id = try c.decode(String.self, forKey: .id)
+        datum = try c.decode(Date.self, forKey: .datum)
+        absender = t(.absender); name = t(.name); nummer = t(.nummer); dienst = t(.dienst).isEmpty ? "dhl" : t(.dienst)
+        dienstName = t(.dienstName).isEmpty ? Dienst.name(dienst) : t(.dienstName)
+        stand = t(.stand).isEmpty ? "unterwegs" : t(.stand)
+        erwartet = t(.erwartet); zeitfenster = t(.zeitfenster); kundenkonto = t(.kundenkonto); verfolgen = t(.verfolgen)
+        manuell = j(.manuell); statusText = t(.statusText); problem = j(.problem); erledigt = j(.erledigt)
+        kontoId = t(.kontoId); kontoName = t(.kontoName)
+        ereignisse = (try? c.decodeIfPresent([Ereignis].self, forKey: .ereignisse)) ?? nil ?? []
+        quelle = t(.quelle).isEmpty ? "ha" : t(.quelle); anbieter = t(.anbieter); ruecksendung = j(.ruecksendung)
+        abholcode = t(.abholcode); abholort = t(.abholort); abholadresse = t(.abholadresse); abholfrist = t(.abholfrist)
+        ruecksendefrist = t(.ruecksendefrist)
+    }
+
+    /// Bis wann zurückschicken (von Home Assistant, sonst aus Shop und Zustelltag) – nil, wenn unbekannt
+    public var rueckgabeBis: Date? {
+        guard stand == "zugestellt" || erledigt, !ruecksendung else { return nil }
+        if let d = Texte.tagAus(ruecksendefrist) { return d }
+        let zugestellt = ereignisse.compactMap(\.zeit).max() ?? datum
+        return Rueckgabe.frist(shop: name.isEmpty ? absender : name, dienst: dienst, zugestellt: zugestellt)
+    }
+
+    /// Paket wartet auf Abholung (mit Code oder Abholstelle)
+    public var zumAbholen: Bool { stand == "abholbereit" && !erledigt && (!abholcode.isEmpty || !abholort.isEmpty || !abholadresse.isEmpty) }
 
     public init(id: String, datum: Date = Date(), absender: String = "", name: String = "", nummer: String = "", dienst: String = "dhl",
                 dienstName: String = "", stand: String = "unterwegs", erwartet: String = "", zeitfenster: String = "", kundenkonto: String = "",
@@ -193,12 +236,18 @@ public struct Uebersicht: Codable, Hashable, Sendable {
                 return Ereignis(zeit: e["zeit"]?.text.flatMap(isoZeit), text: text, ort: e["ort"]?.text ?? "")
             }
             let dienst = b["dienst"]?.text ?? "dhl"
-            return Sendung(id: id, datum: d, absender: b["absender"]?.text ?? "", name: b["name"]?.text ?? "", nummer: b["sendung"]?.text ?? "",
+            var s = Sendung(id: id, datum: d, absender: b["absender"]?.text ?? "", name: b["name"]?.text ?? "", nummer: b["sendung"]?.text ?? "",
                            dienst: dienst, dienstName: b["dienst_name"]?.text ?? "", stand: b["stand"]?.text ?? "unterwegs",
                            erwartet: b["erwartet"]?.text ?? "", zeitfenster: b["zeitfenster"]?.text ?? "", kundenkonto: b["kundenkonto"]?.text ?? "",
                            verfolgen: b["verfolgen"]?.text ?? "", manuell: b["manuell"]?.bool ?? false, statusText: b["status_text"]?.text ?? "",
                            problem: b["problem"]?.bool ?? false, erledigt: b["erledigt"]?.bool ?? false,
                            kontoId: b["konto"]?.text ?? "", kontoName: b["konto_name"]?.text ?? "", ereignisse: ereignisse)
+            s.abholcode = b["abholcode"]?.text ?? ""
+            s.abholort = b["abholort"]?.text ?? ""
+            s.abholadresse = b["abholadresse"]?.text ?? ""
+            s.abholfrist = b["abholfrist"]?.text ?? ""
+            s.ruecksendefrist = b["ruecksendefrist"]?.text ?? ""
+            return s
         }
         let konten: [Konto] = (j["konten"]?.liste ?? []).compactMap { k in
             guard let id = k["id"]?.text else { return nil }

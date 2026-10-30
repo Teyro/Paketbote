@@ -48,6 +48,7 @@ struct EinstellungenAnsicht: View {
                 #if os(iOS)
                 Toggle(T("Live-Aktivität für Pakete, die heute kommen"), isOn: $e.liveAktivitaet)
                 #endif
+                Toggle(T("Nach der Zustellung an die Rücksendefrist erinnern"), isOn: $e.rueckgabeErinnern)
             } header: {
                 Text(T("Anzeige"))
             } footer: {

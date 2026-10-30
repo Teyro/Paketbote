@@ -27,6 +27,8 @@ struct WidgetDaten {
     var inhalt = "alle"
     /// Fehler beim Laden (wird statt der Liste gezeigt, wenn nichts da ist)
     var fehler = ""
+    /// „Angekommen“-Knöpfe zeigen (das Widget hat selbst Zugang zu Home Assistant)
+    var knoepfe = false
 
     var gruppen: Gruppen { inhalt == "briefe" ? Gruppen() : Gruppen(uebersicht?.sendungen ?? [], jetzt: jetzt) }
     var briefe: BriefGruppen { inhalt == "pakete" ? BriefGruppen() : BriefGruppen(uebersicht?.briefe ?? [], jetzt: jetzt) }
@@ -133,6 +135,16 @@ struct WidgetZeile: View {
                 Text(zeile).font(.system(size: 11)).foregroundStyle(farbe).lineLimit(1)
             }
             Spacer(minLength: 0)
+            if interaktiv, let id = haID { AngekommenKnopf(id: id) }
+        }
+    }
+
+    /// „Angekommen“ direkt im Widget (nur für Sendungen und Briefe aus Home Assistant)
+    var interaktiv = false
+    private var haID: String? {
+        switch posten {
+        case .paket(let s): s.quelle == "ha" && !s.fertig ? s.id : nil
+        case .brief(let b): b.erledigt ? nil : b.id
         }
     }
 
@@ -144,6 +156,7 @@ struct WidgetZeile: View {
     }
     private var zeile: String {
         switch posten {
+        case .paket(let s) where s.zumAbholen && !s.abholcode.isEmpty: T("Abholcode %1", s.abholcode) + (s.abholort.isEmpty ? "" : " · " + s.abholort)
         case .paket(let s): Texte.zeile(s, jetzt: jetzt)
         case .brief(let b): (b.wichtig ? T("Wichtig") + " · " : "") + Texte.brief(b, jetzt: jetzt)
         }
@@ -165,6 +178,12 @@ struct KleinesWidget: View {
             if let p = daten.alle.first {
                 Spacer(minLength: 0)
                 switch p {
+                case .paket(let s) where s.zumAbholen && !s.abholcode.isEmpty:
+                    Text(s.titel).font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                    Text(T("Abholcode")).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(s.abholcode).font(.system(size: 26, weight: .bold, design: .monospaced)).minimumScaleFactor(0.6).lineLimit(1)
+                    Text(s.abholort.isEmpty ? Texte.stand(s, jetzt: daten.jetzt) : s.abholort)
+                        .font(.system(size: 10, weight: .medium)).foregroundStyle(.orange).lineLimit(2)
                 case .paket(let s):
                     DienstLogo(dienst: s.dienst, groesse: 42)
                     Text(s.titel).font(.system(size: 14, weight: .bold)).lineLimit(2).minimumScaleFactor(0.8)
@@ -194,7 +213,7 @@ struct MittleresWidget: View {
                 WidgetLeer(daten: daten)
             } else {
                 ForEach(daten.alle.prefix(3)) { p in
-                    Link(destination: p.link) { WidgetZeile(posten: p, jetzt: daten.jetzt) }
+                    Link(destination: p.link) { WidgetZeile(posten: p, jetzt: daten.jetzt, interaktiv: daten.knoepfe) }
                 }
                 Spacer(minLength: 0)
             }
@@ -214,11 +233,11 @@ struct GrossesWidget: View {
                 let heute = Array(daten.heute.prefix(7)), spaeter = Array(daten.unterwegs.prefix(max(0, 7 - heute.count)))
                 if !heute.isEmpty {
                     ueberschrift(T("Heute"))
-                    ForEach(heute) { p in Link(destination: p.link) { WidgetZeile(posten: p, logo: 34, jetzt: daten.jetzt) } }
+                    ForEach(heute) { p in Link(destination: p.link) { WidgetZeile(posten: p, logo: 34, jetzt: daten.jetzt, interaktiv: daten.knoepfe) } }
                 }
                 if !spaeter.isEmpty {
                     ueberschrift(T("Unterwegs"))
-                    ForEach(spaeter) { p in Link(destination: p.link) { WidgetZeile(posten: p, logo: 34, jetzt: daten.jetzt) } }
+                    ForEach(spaeter) { p in Link(destination: p.link) { WidgetZeile(posten: p, logo: 34, jetzt: daten.jetzt, interaktiv: daten.knoepfe) } }
                 }
                 Spacer(minLength: 0)
                 if daten.alle.count > 7 {
@@ -279,3 +298,19 @@ struct ZeilenWidget: View {
     }
 }
 #endif
+
+/// Knopf „Angekommen“ im Widget – führt die Absicht im Widget aus (mit dessen Zugang zu Home Assistant)
+struct AngekommenKnopf: View {
+    let id: String
+    var body: some View {
+        Button(intent: WidgetAngekommen(id: id)) {
+            Image(systemName: "checkmark")
+                .font(.system(size: 11, weight: .bold))
+                .frame(width: 26, height: 22)
+                .background(Color.green.opacity(0.18), in: Capsule())
+                .foregroundStyle(Color.green)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(T("Angekommen"))
+    }
+}

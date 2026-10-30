@@ -317,8 +317,19 @@ struct SendungsZeile: View {
                     .foregroundStyle(standFarbe(sendung))
                     .lineLimit(1)
                 if !sendung.fertig { Fortschritt(sendung: sendung, hoehe: 4).frame(maxWidth: 180) }
+                if let bis = sendung.rueckgabeBis, bis >= Calendar.current.startOfDay(for: Date()) {
+                    Text(T("Rückgabe bis %1", Texte.kurzTag(bis))).font(.caption).foregroundStyle(.purple)
+                }
             }
             Spacer(minLength: 0)
+            if sendung.zumAbholen && !sendung.abholcode.isEmpty {
+                Text(sendung.abholcode)
+                    .font(.system(.callout, design: .monospaced).weight(.bold))
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.18), in: Capsule())
+                    .foregroundStyle(.orange)
+                    .accessibilityLabel(T("Abholcode %1", sendung.abholcode))
+            }
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)

@@ -28,6 +28,7 @@ enum LiveAktivitaeten {
     }
 
     static func zustand(_ s: Sendung) -> PaketAktivitaet.ContentState {
-        .init(stand: s.stand, standText: Texte.stand(s), stufe: s.stufe, zeitfenster: s.zeitfenster)
+        .init(stand: s.stand, standText: s.zumAbholen && !s.abholort.isEmpty ? s.abholort : Texte.stand(s), stufe: s.stufe,
+              zeitfenster: s.zeitfenster, abholcode: s.zumAbholen ? s.abholcode : "")
     }
 }

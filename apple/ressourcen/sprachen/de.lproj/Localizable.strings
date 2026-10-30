@@ -20,7 +20,12 @@
 "17TRACK-Schlüssel (200 Sendungen frei)" = "17TRACK-Schlüssel (200 Sendungen frei)";
 "Abbrechen" = "Abbrechen";
 "Abfrage über %1." = "Abfrage über %1.";
+"Abholcode" = "Abholcode";
+"Abholcode %1" = "Abholcode %1";
+"Abholcode kopiert" = "Abholcode kopiert";
 "Abholen" = "Abholen";
+"Abholen bis %1" = "Abholen bis %1";
+"Abholstelle" = "Abholstelle";
 "Absender unbekannt" = "Absender unbekannt";
 "Adresse" = "Adresse";
 "Adresse, z. B. http://homeassistant.local:8123" = "Adresse, z. B. http://homeassistant.local:8123";
@@ -143,6 +148,7 @@
 "kommt heute" = "kommt heute";
 "kommt morgen" = "kommt morgen";
 "Kontingent aufgebraucht" = "Kontingent aufgebraucht";
+"Kopieren" = "Kopieren";
 "Kundenkonto" = "Kundenkonto";
 "Lade das Archiv …" = "Lade das Archiv …";
 "Langlebiges Zugriffstoken" = "Langlebiges Zugriffstoken";
@@ -157,8 +163,10 @@
 "Mitteilungen bei neuem Stand" = "Mitteilungen bei neuem Stand";
 "Mo" = "Mo";
 "Monat" = "Monat";
+"morgen" = "morgen";
 "Morgen erinnern" = "Morgen erinnern";
 "Morgen früh" = "Morgen früh";
+"Nach der Zustellung an die Rücksendefrist erinnern" = "Nach der Zustellung an die Rücksendefrist erinnern";
 "Nach Updates suchen" = "Nach Updates suchen";
 "Nach Updates suchen …" = "Nach Updates suchen …";
 "Name" = "Name";
@@ -203,6 +211,12 @@
 "Postfach jetzt lesen" = "Postfach jetzt lesen";
 "Problem bei der Zustellung" = "Problem bei der Zustellung";
 "Quelle" = "Quelle";
+"Route starten" = "Route starten";
+"Route zur Abholstelle" = "Route zur Abholstelle";
+"Rückgabe bis %1" = "Rückgabe bis %1";
+"Rückgabe: %1" = "Rückgabe: %1";
+"Rücksendefrist bis %1 (laut Shop, ohne Gewähr)." = "Rücksendefrist bis %1 (laut Shop, ohne Gewähr).";
+"Rücksendefrist laut Shop (ohne Gewähr)" = "Rücksendefrist laut Shop (ohne Gewähr)";
 "Rücksendung" = "Rücksendung";
 "Sa" = "Sa";
 "Schlüssel" = "Schlüssel";
@@ -264,4 +278,6 @@
 "Zugriff verweigert – bitte den Token prüfen." = "Zugriff verweigert – bitte den Token prüfen.";
 "Zuletzt: %1" = "Zuletzt: %1";
 "zur Abholung bereit" = "zur Abholung bereit";
+"Zur Abholung bereit" = "Zur Abholung bereit";
 "Zur Abholung bereit: %1." = "Zur Abholung bereit: %1.";
+"Zustellung umleiten (Nachbar, Ablageort) …" = "Zustellung umleiten (Nachbar, Ablageort) …";

@@ -84,11 +84,85 @@ ColumnLayout {
         }
     }
 
+    // Abholen: Code groß, Abholstelle, Frist, Route
+    Rectangle {
+        Layout.fillWidth: true
+        visible: Logik.zumAbholen(detail.sendung)
+        implicitHeight: abholen.implicitHeight + Kirigami.Units.largeSpacing * 2
+        radius: Kirigami.Units.cornerRadius
+        color: Qt.rgba(Kirigami.Theme.neutralTextColor.r, Kirigami.Theme.neutralTextColor.g, Kirigami.Theme.neutralTextColor.b, 0.12)
+        ColumnLayout {
+            id: abholen
+            anchors { left: parent.left; right: parent.right; top: parent.top; margins: Kirigami.Units.largeSpacing }
+            spacing: Kirigami.Units.smallSpacing
+            QQC2.Label {
+                visible: !!detail.sendung.abholcode
+                text: S.t("Abholcode")
+                font: Kirigami.Theme.smallFont
+                color: Kirigami.Theme.disabledTextColor
+            }
+            RowLayout {
+                visible: !!detail.sendung.abholcode
+                QQC2.Label {
+                    text: detail.sendung.abholcode
+                    font.family: "monospace"
+                    font.pixelSize: Kirigami.Units.gridUnit * 2
+                    font.weight: Font.Bold
+                    Accessible.name: S.t("Abholcode %1", detail.sendung.abholcode)
+                }
+                QQC2.ToolButton {
+                    icon.name: "edit-copy"
+                    text: S.t("Kopieren")
+                    display: QQC2.AbstractButton.IconOnly
+                    QQC2.ToolTip.visible: hovered
+                    QQC2.ToolTip.text: text
+                    onClicked: { kopie.text = detail.sendung.abholcode; kopie.selectAll(); kopie.copy(); }
+                    TextEdit { id: kopie; visible: false }
+                }
+            }
+            QQC2.Label {
+                Layout.fillWidth: true
+                visible: !!detail.sendung.abholort
+                text: detail.sendung.abholort
+                font.weight: Font.DemiBold
+                wrapMode: Text.Wrap
+            }
+            QQC2.Label {
+                Layout.fillWidth: true
+                visible: !!detail.sendung.abholadresse
+                text: detail.sendung.abholadresse
+                wrapMode: Text.Wrap
+            }
+            QQC2.Label {
+                Layout.fillWidth: true
+                readonly property double bis: Logik.tagAus(detail.sendung.abholfrist)
+                visible: bis > 0
+                text: S.t("Abholen bis %1", bis ? Logik.kurzTag(bis, detail.jetzt) : "")
+                color: bis && bis - detail.jetzt < 2 * 86400000 ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
+            }
+            QQC2.Button {
+                visible: !!(detail.sendung.abholort || detail.sendung.abholadresse)
+                icon.name: "map-flat"
+                text: S.t("Route starten")
+                onClicked: Qt.openUrlExternally(Logik.routeAdresse(detail.sendung))
+            }
+        }
+    }
+
+    // Rückgabefrist nach der Zustellung
+    Kirigami.InlineMessage {
+        Layout.fillWidth: true
+        visible: Logik.rueckgabeOffen(detail.sendung, detail.jetzt)
+        type: Kirigami.MessageType.Information
+        icon.name: "edit-undo"
+        text: S.t("Rückgabe bis %1", Logik.rueckgabeOffen(detail.sendung, detail.jetzt) ? Logik.kurzTag(Logik.rueckgabeBis(detail.sendung), detail.jetzt) : "")
+    }
+
     // Karte der Stationen (OpenStreetMap; fehlt QtLocation, bleibt sie weg)
     Loader {
         Layout.fillWidth: true
         Layout.preferredHeight: active && status === Loader.Ready ? Kirigami.Units.gridUnit * 12 : 0
-        active: detail.sendung.ereignisse.some(function (e) { return e.ort; })
+        active: !Logik.zumAbholen(detail.sendung) && detail.sendung.ereignisse.some(function (e) { return e.ort; })
         source: "Karte.qml"
         onLoaded: item.ereignisse = Qt.binding(function () { return detail.sendung.ereignisse; })
     }
