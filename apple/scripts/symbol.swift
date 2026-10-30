@@ -40,10 +40,10 @@ func bild(_ px: Int, mac: Bool) -> Data {
         ctx.restoreGState()
     }
     // Paket mit dunklem Rand, damit es sich vom Brief abhebt
-    let rand = NSImage.SymbolConfiguration(pointSize: s * 0.36, weight: .black).applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(red: 0.12, green: 0.25, blue: 0.72, alpha: 1)]))
+    let umriss = NSImage.SymbolConfiguration(pointSize: s * 0.36, weight: .black).applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(red: 0.12, green: 0.25, blue: 0.72, alpha: 1)]))
     let paket = NSImage.SymbolConfiguration(pointSize: s * 0.32, weight: .semibold)
         .applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1)]))
-    if let r = NSImage(systemSymbolName: "shippingbox.fill", accessibilityDescription: nil)?.withSymbolConfiguration(rand),
+    if let r = NSImage(systemSymbolName: "shippingbox.fill", accessibilityDescription: nil)?.withSymbolConfiguration(umriss),
        let p = NSImage(systemSymbolName: "shippingbox.fill", accessibilityDescription: nil)?.withSymbolConfiguration(paket) {
         let mitte = NSPoint(x: s * 0.62, y: s * 0.36)
         r.draw(in: NSRect(x: mitte.x - r.size.width / 2, y: mitte.y - r.size.height / 2, width: r.size.width, height: r.size.height))
