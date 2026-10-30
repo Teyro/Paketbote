@@ -77,14 +77,15 @@ struct SendungsListe: View {
     @State private var neuerName = ""
 
     var body: some View {
-        let bereich = kern.einstellungen.bereich
+        @Bindable var e = kern.einstellungen
+        let bereich = e.bereich
         let mitPaketen = bereich != "briefe", mitBriefen = bereich != "pakete"
         let g = mitPaketen ? kern.gruppen : Gruppen()
         let b = mitBriefen ? kern.briefGruppen : BriefGruppen()
         let leer = g.aktiv.isEmpty && g.zugestellt.isEmpty && b.offen.isEmpty && b.angekommen.isEmpty
         List(selection: $kern.auswahl) {
             if kern.einstellungen.eingerichtet {
-                Picker(T("Zeigen"), selection: $kern.einstellungen.bereich) {
+                Picker(T("Zeigen"), selection: $e.bereich) {
                     Text(T("Alles")).tag("alle")
                     Text(kern.briefGruppen.offen.isEmpty ? T("Briefe") : T("Briefe (%1)", "\(kern.briefGruppen.offen.count)")).tag("briefe")
                     Text(kern.gruppen.aktiv.isEmpty ? T("Pakete") : T("Pakete (%1)", "\(kern.gruppen.aktiv.count)")).tag("pakete")
