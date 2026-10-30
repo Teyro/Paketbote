@@ -80,6 +80,29 @@ final class KernTests: XCTestCase {
         XCTAssertEqual(zurueck.sendungen.map(\.id), u.sendungen.map(\.id))
         XCTAssertEqual(zurueck.sendungen[0].ereignisse, u.sendungen[0].ereignisse)
     }
+
+    func testAbholenUndRueckgabe() throws {
+        let u = beispiel()
+        let kaffee = u.sendungen[4]
+        XCTAssertTrue(kaffee.zumAbholen)
+        XCTAssertEqual(kaffee.abholcode, "482913")
+        XCTAssertEqual(kaffee.abholort, "Packstation 123")
+        XCTAssertFalse(u.sendungen[0].zumAbholen)
+        XCTAssertNil(kaffee.rueckgabeBis, "erst nach der Zustellung")
+        // Shop-Regel: Zalando 100 Tage, unbekannter Shop keine Frist
+        let zu = kal.date(from: DateComponents(year: 2026, month: 10, day: 27, hour: 16))!
+        XCTAssertEqual(Rueckgabe.frist(shop: "Zalando SE", dienst: "dpd", zugestellt: zu, kalender: kal),
+                       kal.date(from: DateComponents(year: 2027, month: 2, day: 4)))
+        XCTAssertNil(Rueckgabe.frist(shop: "Fahrradladen Nord", dienst: "ups", zugestellt: zu, kalender: kal))
+        XCTAssertNotNil(Rueckgabe.frist(shop: "", dienst: "amazon", zugestellt: zu, kalender: kal))
+        // ältere gespeicherte Sendungen ohne die neuen Felder bleiben lesbar
+        let daten = try JSONEncoder().encode(kaffee)
+        var j = try XCTUnwrap(JSONSerialization.jsonObject(with: daten) as? [String: Any])
+        for k in ["abholcode", "abholort", "abholadresse", "abholfrist", "ruecksendefrist"] { j.removeValue(forKey: k) }
+        let alt = try JSONDecoder().decode(Sendung.self, from: JSONSerialization.data(withJSONObject: j))
+        XCTAssertEqual(alt.id, "p5")
+        XCTAssertEqual(alt.abholcode, "")
+    }
 }
 
 final class BriefTests: XCTestCase {
@@ -111,26 +134,4 @@ final class BriefTests: XCTestCase {
         XCTAssertEqual(try dec.decode(Uebersicht.self, from: Data(alt.utf8)).briefe.count, 0)
     }
 
-    func testAbholenUndRueckgabe() throws {
-        let u = beispiel()
-        let kaffee = u.sendungen[4]
-        XCTAssertTrue(kaffee.zumAbholen)
-        XCTAssertEqual(kaffee.abholcode, "482913")
-        XCTAssertEqual(kaffee.abholort, "Packstation 123")
-        XCTAssertFalse(u.sendungen[0].zumAbholen)
-        XCTAssertNil(kaffee.rueckgabeBis, "erst nach der Zustellung")
-        // Shop-Regel: Zalando 100 Tage, unbekannter Shop keine Frist
-        let zu = kal.date(from: DateComponents(year: 2026, month: 10, day: 27, hour: 16))!
-        XCTAssertEqual(Rueckgabe.frist(shop: "Zalando SE", dienst: "dpd", zugestellt: zu, kalender: kal),
-                       kal.date(from: DateComponents(year: 2027, month: 2, day: 4)))
-        XCTAssertNil(Rueckgabe.frist(shop: "Fahrradladen Nord", dienst: "ups", zugestellt: zu, kalender: kal))
-        XCTAssertNotNil(Rueckgabe.frist(shop: "", dienst: "amazon", zugestellt: zu, kalender: kal))
-        // ältere gespeicherte Sendungen ohne die neuen Felder bleiben lesbar
-        let daten = try JSONEncoder().encode(kaffee)
-        var j = try XCTUnwrap(JSONSerialization.jsonObject(with: daten) as? [String: Any])
-        for k in ["abholcode", "abholort", "abholadresse", "abholfrist", "ruecksendefrist"] { j.removeValue(forKey: k) }
-        let alt = try JSONDecoder().decode(Sendung.self, from: JSONSerialization.data(withJSONObject: j))
-        XCTAssertEqual(alt.id, "p5")
-        XCTAssertEqual(alt.abholcode, "")
-    }
 }
