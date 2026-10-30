@@ -57,7 +57,16 @@ PlasmoidItem {
         onNeuerStand: (titel, text, id) => { if (Plasmoid.configuration.mitteilungen) root.melden(titel, text); }
     }
 
-    readonly property var gruppen: Logik.gruppen(verbindung.sendungen, jetzt, gemeinsam.tageZugestellt)
+    readonly property var gruppenAlle: Logik.gruppen(verbindung.sendungen, jetzt, gemeinsam.tageZugestellt)
+    readonly property var briefGruppenAlle: Logik.briefGruppen(verbindung.briefe, jetzt)
+    /// Was die Kachel zeigt (Einstellungen): alles, nur Briefe oder nur Pakete
+    readonly property string inhalt: Plasmoid.configuration.inhalt || "alle"
+    readonly property var leerP: ({ heute: [], unterwegs: [], zugestellt: [], aktiv: [] })
+    readonly property var leerB: ({ heute: [], unterwegs: [], angekommen: [], offen: [] })
+    readonly property var gruppen: inhalt === "briefe" ? leerP : gruppenAlle
+    readonly property var briefGruppen: inhalt === "pakete" ? leerB : briefGruppenAlle
+    readonly property int heuteZahl: gruppen.heute.length + briefGruppen.heute.length
+    readonly property int offenZahl: gruppen.aktiv.length + briefGruppen.offen.length
 
     // Mitteilungen und Update über die Kommandozeile
     P5Support.DataSource {
@@ -71,7 +80,7 @@ PlasmoidItem {
     }
     function sh(text) { return "'" + String(text).replace(/'/g, "'\\''") + "'"; }
     function melden(titel, text) {
-        shell.connectSource("notify-send -a Paketbote -i package-x-generic " + sh(titel) + " " + sh(text));
+        shell.connectSource("notify-send -a Post & Pakete -i package-x-generic " + sh(titel) + " " + sh(text));
     }
 
     // Updates: neueste Version auf GitHub; Installation lädt das Linux-Paket und führt installieren.sh aus
@@ -83,12 +92,12 @@ PlasmoidItem {
         property string fehler: ""
         function pruefen() {
             var x = new XMLHttpRequest();
-            x.open("GET", "https://api.github.com/repos/Teyro/Paketbote/releases/latest");
+            x.open("GET", "https://api.github.com/repos/Teyro/Post-und-Pakete/releases/latest");
             x.onreadystatechange = function () {
                 if (x.readyState !== XMLHttpRequest.DONE || x.status !== 200) return;
                 var j = JSON.parse(x.responseText), v = String(j.tag_name || "").replace(/^v/, "");
-                var a = (j.assets || []).find(function (a) { return /^paketbote-linux-[\d.]+\.tar\.gz$/.test(a.name)
-                    && String(a.browser_download_url).indexOf("https://github.com/Teyro/Paketbote/releases/download/") === 0; });
+                var a = (j.assets || []).find(function (a) { return /^post-und-pakete-linux-[\d.]+\.tar\.gz$/.test(a.name)
+                    && String(a.browser_download_url).indexOf("https://github.com/Teyro/Post-und-Pakete/releases/download/") === 0; });
                 if (a && neuer(v, Plasmoid.metaData.version)) { neu = v; datei = a.browser_download_url; }
             };
             x.send();
@@ -102,11 +111,11 @@ PlasmoidItem {
             if (!datei) return;
             laeuft = true;
             fehler = "";
-            shell.connectSource("sh -c " + sh("d=$(mktemp -d) && cd \"$d\" && curl -fsSL " + sh(datei) + " | tar xz && sh ./paketbote/installieren.sh") + " # paketbote-update");
+            shell.connectSource("sh -c " + sh("d=$(mktemp -d) && cd \"$d\" && curl -fsSL " + sh(datei) + " | tar xz && sh ./post-und-pakete/installieren.sh") + " # paketbote-update");
         }
         function fertig(code, text) {
             laeuft = false;
-            if (code === 0) { neu = ""; root.melden(S.t("Paketbote"), S.t("Update installiert – Plasma lädt das Widget beim nächsten Start neu.")); }
+            if (code === 0) { neu = ""; root.melden(S.t("Post & Pakete"), S.t("Update installiert – Plasma lädt das Widget beim nächsten Start neu.")); }
             else fehler = text || S.t("Update fehlgeschlagen");
         }
     }
@@ -115,11 +124,13 @@ PlasmoidItem {
         onTriggered: updater.pruefen()
     }
 
-    Plasmoid.icon: "package-x-generic"
-    Plasmoid.status: gruppen.aktiv.length ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus
-    toolTipMainText: Logik.kopfTitel(gruppen.aktiv)
+    readonly property string symbolName: inhalt === "briefe" ? "mail-message" : inhalt === "pakete" ? "package-x-generic" : "mail-folder-inbox"
+    Plasmoid.icon: symbolName
+    Plasmoid.status: offenZahl ? PlasmaCore.Types.ActiveStatus : PlasmaCore.Types.PassiveStatus
+    toolTipMainText: Logik.postTitel(briefGruppen.offen, gruppen.aktiv)
     toolTipSubText: !verbindung.bereit ? S.t("Noch nicht eingerichtet.") : verbindung.fehler ? verbindung.fehler
-                    : gruppen.aktiv.slice(0, 5).map(function (s) { return Logik.titel(s) + " – " + Logik.standText(s, root.jetzt); }).join("\n")
+                    : briefGruppen.offen.slice(0, 3).map(function (b) { return "✉ " + Logik.briefTitel(b) + " – " + Logik.briefZeile(b, root.jetzt, false); })
+                      .concat(gruppen.aktiv.slice(0, 5).map(function (s) { return Logik.titel(s) + " – " + Logik.standText(s, root.jetzt); })).join("\n")
 
     switchWidth: Kirigami.Units.gridUnit * 12
     switchHeight: Kirigami.Units.gridUnit * 10
@@ -135,21 +146,21 @@ PlasmoidItem {
             id: symbol
             anchors.fill: parent
             anchors.margins: Kirigami.Units.smallSpacing
-            source: "package-x-generic"
+            source: root.symbolName
             active: kompakt.containsMouse
         }
         Rectangle {
-            visible: root.gruppen.aktiv.length > 0
+            visible: root.offenZahl > 0
             anchors.right: symbol.right
             anchors.bottom: symbol.bottom
             width: Math.max(height, zahl.implicitWidth + Kirigami.Units.smallSpacing)
             height: Math.max(10, Math.round(symbol.height * 0.5))
             radius: height / 2
-            color: root.gruppen.heute.length ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
+            color: root.heuteZahl ? Kirigami.Theme.highlightColor : Kirigami.Theme.disabledTextColor
             PC3.Label {
                 id: zahl
                 anchors.centerIn: parent
-                text: root.gruppen.heute.length || root.gruppen.aktiv.length
+                text: root.heuteZahl || root.offenZahl
                 font.pixelSize: Math.max(7, parent.height * 0.72)
                 font.weight: Font.Bold
                 color: Kirigami.Theme.highlightedTextColor
@@ -173,7 +184,7 @@ PlasmoidItem {
                 Kirigami.Heading {
                     Layout.fillWidth: true
                     level: 3
-                    text: stapel.depth > 1 && stapel.currentItem.titel ? stapel.currentItem.titel : Logik.kopfTitel(root.gruppen.aktiv)
+                    text: stapel.depth > 1 && stapel.currentItem.titel ? stapel.currentItem.titel : Logik.postTitel(root.briefGruppen.offen, root.gruppen.aktiv)
                     elide: Text.ElideRight
                 }
                 PC3.ToolButton {
@@ -204,7 +215,7 @@ PlasmoidItem {
                     Layout.margins: Kirigami.Units.smallSpacing
                     visible: !verbindung.bereit || verbindung.fehler !== "" || updater.neu !== ""
                     type: !verbindung.bereit || updater.neu ? Kirigami.MessageType.Information : Kirigami.MessageType.Error
-                    text: !verbindung.bereit ? S.t("Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen auch die Pakete aus deinen Versandmails dazu.")
+                    text: !verbindung.bereit ? S.t("Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen die angekündigten Briefe und die Pakete aus deinen Versandmails dazu.")
                           : verbindung.fehler ? verbindung.fehler : updater.fehler || S.t("Version %1 ist da", updater.neu)
                     actions: Kirigami.Action {
                         text: !verbindung.bereit ? S.t("Home Assistant …") : verbindung.fehler ? S.t("Neu laden") : S.t("Aktualisieren")
@@ -219,10 +230,13 @@ PlasmoidItem {
                     ListView {
                         id: liste
                         model: {
-                            var m = [];
-                            root.gruppen.heute.forEach(function (s) { m.push({ abschnitt: S.t("Heute"), s: s }); });
-                            root.gruppen.unterwegs.forEach(function (s) { m.push({ abschnitt: S.t("Unterwegs"), s: s }); });
-                            root.gruppen.zugestellt.forEach(function (s) { m.push({ abschnitt: S.t("Zugestellt"), s: s }); });
+                            var m = [], b = root.briefGruppen, g = root.gruppen;
+                            b.heute.forEach(function (x) { m.push({ abschnitt: S.t("Heute"), b: x }); });
+                            g.heute.forEach(function (s) { m.push({ abschnitt: S.t("Heute"), s: s }); });
+                            b.unterwegs.forEach(function (x) { m.push({ abschnitt: S.t("Unterwegs"), b: x }); });
+                            g.unterwegs.forEach(function (s) { m.push({ abschnitt: S.t("Unterwegs"), s: s }); });
+                            b.angekommen.slice(0, 5).forEach(function (x) { m.push({ abschnitt: S.t("Angekommen"), b: x }); });
+                            g.zugestellt.forEach(function (s) { m.push({ abschnitt: S.t("Angekommen"), s: s }); });
                             return m;
                         }
                         section.property: "abschnitt"
@@ -231,20 +245,69 @@ PlasmoidItem {
                             width: ListView.view.width
                             text: section
                         }
-                        delegate: SendungsZeile {
+                        delegate: Loader {
+                            id: eintrag
                             required property var modelData
-                            sendung: modelData.s
-                            jetzt: root.jetzt
-                            mitKonto: verbindung.mehrereKonten
-                            onClicked: stapel.push(detailSeite, { sendungId: modelData.s.id })
+                            width: ListView.view.width
+                            sourceComponent: modelData.b ? briefKomponente : paketKomponente
+                            Component {
+                                id: paketKomponente
+                                SendungsZeile {
+                                    sendung: eintrag.modelData.s
+                                    jetzt: root.jetzt
+                                    mitKonto: verbindung.mehrereKonten
+                                    onClicked: stapel.push(detailSeite, { sendungId: eintrag.modelData.s.id })
+                                }
+                            }
+                            Component {
+                                id: briefKomponente
+                                BriefZeile {
+                                    brief: eintrag.modelData.b
+                                    bild: verbindung.bilder[eintrag.modelData.b.id] || ""
+                                    jetzt: root.jetzt
+                                    mitKonto: verbindung.mehrereKonten
+                                    onClicked: stapel.push(briefSeite, { briefId: eintrag.modelData.b.id })
+                                }
+                            }
                         }
                         PlasmaExtras.PlaceholderMessage {
                             anchors.centerIn: parent
                             width: parent.width - Kirigami.Units.gridUnit * 2
                             visible: verbindung.geladen && liste.count === 0
-                            iconName: "package-x-generic"
-                            text: S.t("Keine Pakete unterwegs")
+                            iconName: root.symbolName
+                            text: root.inhalt === "briefe" ? S.t("Keine Briefe angekündigt") : root.inhalt === "pakete" ? S.t("Keine Pakete unterwegs") : S.t("Keine Post unterwegs")
                         }
+                    }
+                }
+            }
+        }
+
+        Component {
+            id: briefSeite
+            PC3.ScrollView {
+                id: bseite
+                property string briefId: ""
+                readonly property var brief: verbindung.brief(briefId)
+                readonly property string titel: brief ? Logik.briefTitel(brief) : ""
+                contentWidth: availableWidth
+                ColumnLayout {
+                    width: parent.width
+                    spacing: Kirigami.Units.largeSpacing
+                    BriefInhalt {
+                        Layout.fillWidth: true
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: !!bseite.brief
+                        brief: bseite.brief || { datum: 0, absender: "", wichtig: false, erledigt: false }
+                        bild: bseite.brief ? (verbindung.bilder[bseite.brief.id] || "") : ""
+                        jetzt: root.jetzt
+                        mitKonto: verbindung.mehrereKonten
+                    }
+                    PC3.Button {
+                        Layout.margins: Kirigami.Units.largeSpacing
+                        visible: !!bseite.brief
+                        icon.name: bseite.brief && bseite.brief.erledigt ? "edit-undo" : "dialog-ok-apply"
+                        text: bseite.brief && bseite.brief.erledigt ? S.t("Doch nicht angekommen") : S.t("Angekommen")
+                        onClicked: verbindung.briefErledigt(bseite.brief.id, !bseite.brief.erledigt)
                     }
                 }
             }

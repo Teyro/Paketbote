@@ -68,11 +68,11 @@ def ha(methode: str, pfad: str, koerper: dict | None = None):
 
 
 def melden(titel: str, text: str) -> None:
-    subprocess.Popen(["notify-send", "-a", "Paketbote", "-i", "package-x-generic", titel, text])
+    subprocess.Popen(["notify-send", "-a", "Post & Pakete", "-i", "package-x-generic", titel, text])
 
 
 def app_oeffnen(*argumente: str) -> None:
-    """Paketbote-App starten (Befehl aus dem Startmenü-Eintrag)"""
+    """Post & Pakete-App starten (Befehl aus dem Startmenü-Eintrag)"""
     datei = os.path.join(os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")), "applications", "de.teyro.paketbote.desktop")
     befehl = ""
     try:
@@ -97,7 +97,7 @@ class Runner(dbus.service.Object):
         if n and len(q) <= len(n) + 30:
             d = dienst_von_nummer(n)
             treffer.append((f"neu|{n}|{d}", t(f"Sendung {n} verfolgen", f"Track shipment {n}"), "package-x-generic", 100, 0.9,
-                            {"subtext": t("Paketbote", "Paketbote") + (f" · {NAMEN[d]}" if d else "")}))
+                            {"subtext": t("Post & Pakete", "Post & Pakete") + (f" · {NAMEN[d]}" if d else "")}))
         if q.lower() in ("paket", "pakete", "paketbote", "parcel", "parcels", "sendungen"):
             try:
                 daten = ha("GET", "/api/briefankuendigung/briefe") or {}
@@ -112,7 +112,7 @@ class Runner(dbus.service.Object):
                                 "package-x-generic", 70, 0.8 if b.get("stand") in ("heute", "abholbereit") else 0.6,
                                 {"subtext": f"{NAMEN.get(b.get('dienst') or 'dhl', '')} · {stand}"}))
             if not offen:
-                treffer.append(("app|", t("Paketbote öffnen", "Open Paketbote"), "package-x-generic", 50, 0.5,
+                treffer.append(("app|", t("Post & Pakete öffnen", "Open Post & Pakete"), "package-x-generic", 50, 0.5,
                                 {"subtext": t("Keine Pakete unterwegs", "No parcels on the way") if daten else ""}))
         return treffer
 

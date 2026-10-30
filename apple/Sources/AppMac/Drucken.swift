@@ -12,7 +12,16 @@ enum Drucken {
         let kopf: [NSAttributedString.Key: Any] = [.font: NSFont.boldSystemFont(ofSize: 13)]
         let normal: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 11)]
         let klein: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 9), .foregroundColor: NSColor.darkGray]
-        text.append(NSAttributedString(string: T("Paketbote") + " – " + Date().formatted(date: .long, time: .shortened) + "\n\n", attributes: titel))
+        text.append(NSAttributedString(string: T("Post & Pakete") + " – " + Date().formatted(date: .long, time: .shortened) + "\n\n", attributes: titel))
+        let b = kern.briefGruppen
+        if !b.offen.isEmpty {
+            text.append(NSAttributedString(string: T("Briefe") + "\n", attributes: kopf))
+            for br in b.offen {
+                text.append(NSAttributedString(string: (br.wichtig ? "⚠️ " : "") + br.titel + "\n", attributes: normal))
+                text.append(NSAttributedString(string: "   " + Texte.brief(br) + "\n", attributes: klein))
+            }
+            text.append(NSAttributedString(string: "\n"))
+        }
         for (name, liste) in [(T("Heute"), g.heute), (T("Unterwegs"), g.unterwegs), (T("Zugestellt"), g.zugestellt)] where !liste.isEmpty {
             text.append(NSAttributedString(string: name + "\n", attributes: kopf))
             for s in liste {

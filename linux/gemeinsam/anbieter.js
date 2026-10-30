@@ -5,7 +5,7 @@
 // DHL (Schlüssel) → UPS (Zugang) → 17TRACK (Schlüssel) → Ship24 (Schlüssel) → öffentliche Seiten von GLS und DPD.
 // Gleiche Auswertung wie PaketKern (Swift) und die Home-Assistant-Integration (Python).
 
-var AGENT = "Mozilla/5.0 (X11; Linux x86_64) Paketbote/1.2";
+var AGENT = "Mozilla/5.0 (X11; Linux x86_64) PostUndPakete/2.0";
 
 function anfrage(methode, url, kopf, koerper) {
     return new Promise(function (ok, fehler) {
@@ -186,7 +186,7 @@ function kette(s, dienst) {
                        { "Authorization": "Basic " + Qt.btoa(s.upsId + ":" + s.upsGeheim), "Content-Type": "application/x-www-form-urlencoded" }, "grant_type=client_credentials")
             .then(function (t) {
                 return anfrage("GET", "https://onlinetools.ups.com/api/track/v1/details/" + encodeURIComponent(n) + "?locale=de_DE",
-                               { "Authorization": "Bearer " + t.access_token, "transId": String(Date.now()), "transactionSrc": "Paketbote" });
+                               { "Authorization": "Bearer " + t.access_token, "transId": String(Date.now()), "transactionSrc": "PostUndPakete" });
             })
             .then(function (j) { var p = (((((j.trackResponse || {}).shipment || [])[0] || {}).package) || [])[0]; if (!p) throw "unbekannt"; return ups(p); });
     } });

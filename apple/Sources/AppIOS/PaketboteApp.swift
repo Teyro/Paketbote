@@ -90,11 +90,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 final class UpdateHinweis {
     static let shared = UpdateHinweis()
     private(set) var neu: String?
-    let seite = URL(string: "https://github.com/Teyro/Paketbote/releases/latest")!
+    let seite = URL(string: "https://github.com/Teyro/Post-und-Pakete/releases/latest")!
     var ausgeblendet = false
 
     func pruefen() async {
-        guard !Kern.shared.vorschau, let url = URL(string: "https://api.github.com/repos/Teyro/Paketbote/releases/latest") else { return }
+        guard !Kern.shared.vorschau, let url = URL(string: "https://api.github.com/repos/Teyro/Post-und-Pakete/releases/latest") else { return }
         var r = URLRequest(url: url)
         r.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         guard let (d, _) = try? await URLSession.shared.data(for: r), let j = JSON.lesen(d), let tag = j["tag_name"]?.text else { return }

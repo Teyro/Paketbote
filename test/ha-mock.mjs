@@ -2,11 +2,34 @@
 // (iPhone, Mac, Linux). Aufruf: node test/ha-mock.mjs [port]   Token: test-token (HA_MOCK_TOKEN)
 import http from 'node:http';
 import fs from 'node:fs';
+import zlib from 'node:zlib';
 
 const TOKEN = process.env.HA_MOCK_TOKEN || 'test-token';
 const PORT = Number(process.argv[2] || 8123);
 const LOG = process.env.HA_MOCK_LOG || '/tmp/paketbote-mock.log';
 const log = (z) => { try { fs.appendFileSync(LOG, z + '\n'); } catch { /* egal */ } };
+
+/** Briefumschlag als PNG (ohne Bibliothek): Papier, dunkler Kopf, Adresszeilen, Marke */
+function umschlagPNG(b = 480, h = 300, n = 0) {
+  const zeilen = [];
+  for (let y = 0; y < h; y++) {
+    const z = [0];
+    for (let x = 0; x < b; x++) {
+      let p = [246, 244, 238];
+      if (y < 34) p = n % 2 ? [20, 60, 120] : [34, 34, 34];
+      else if (y > 150 && y < 160 && x > 54 && x < 260 + n * 20) p = [60, 60, 60];
+      else if ((y > 176 && y < 184 || y > 198 && y < 206) && x > 54 && x < 300) p = [100, 100, 100];
+      else if (x > 370 && x < 436 && y > 56 && y < 122) p = n % 2 ? [40, 140, 70] : [200, 40, 40];
+      z.push(...p);
+    }
+    zeilen.push(Buffer.from(z));
+  }
+  const tab = []; for (let k = 0; k < 256; k++) { let c = k; for (let j = 0; j < 8; j++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; tab[k] = c >>> 0; }
+  const crc = (buf) => { let r = 0xffffffff; for (const x of buf) r = tab[(r ^ x) & 255] ^ (r >>> 8); return (r ^ 0xffffffff) >>> 0; };
+  const block = (art, d) => { const l = Buffer.alloc(4); l.writeUInt32BE(d.length); const ad = Buffer.concat([Buffer.from(art), d]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(ad)); return Buffer.concat([l, ad, c]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(b, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), block('IHDR', ihdr), block('IDAT', zlib.deflateSync(Buffer.concat(zeilen))), block('IEND', Buffer.alloc(0))]);
+}
 
 const jetzt = Date.now();
 const tag = (n) => { const d = new Date(Date.now() + n * 86400e3); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
@@ -49,7 +72,10 @@ const POST = {
       status_text: 'Zustellung nicht möglich – Empfänger nicht angetroffen', ereignisse: [{ zeit: zeit(30), text: 'Zustellung nicht möglich – Empfänger nicht angetroffen', ort: 'Hamburg' }] }),
     paket({ id: 'e'.repeat(20), datum: jetzt - 74 * 3600e3, absender: 'Zalando SE', sendung: '01234567890123', stand: 'zugestellt', dienst: 'dpd',
       ereignisse: [{ zeit: zeit(74), text: 'Zugestellt', ort: 'Hamburg' }] }),
-    { id: 'a'.repeat(20), datum: jetzt - 60e3, absender: 'Finanzamt Hamburg-Nord', art: 'brief', bild: false, konto: 'e1', konto_name: 'Kim' },
+    { id: 'a'.repeat(20), datum: jetzt - 60e3, absender: 'Finanzamt Hamburg-Nord', art: 'brief', bild: true, wichtig: true, konto: 'e1', konto_name: 'Kim' },
+    { id: 'b'.repeat(20), datum: jetzt - 120e3, absender: 'AOK Nordwest', art: 'brief', bild: true, konto: 'e1', konto_name: 'Kim' },
+    { id: 'f'.repeat(20), datum: jetzt - 26 * 3600e3, absender: 'Stadtwerke Hamburg', art: 'brief', bild: true, konto: 'e1', konto_name: 'Kim' },
+    { id: 'd'.repeat(20), datum: jetzt - 50 * 3600e3, absender: '', art: 'brief', bild: false, konto: 'e1', konto_name: 'Kim' },
   ],
 };
 const KONTEN = [{ id: 'e1', name: 'Kim', fehler: '', zeiten: ['02:00', '05:00'], dhl_live: true, siebzehn: true, siebzehn_rest: 187 }];
@@ -72,6 +98,16 @@ const server = http.createServer((req, res) => {
       return json({ version: 4, stand: POST.stand, fehler: '', dienste: NAMEN,
         konten: KONTEN.map((x) => ({ ...x, stand: POST.stand, naechster_abruf: jetzt + 6 * 3600e3, laeuft: false })),
         briefe: POST.briefe.map((b) => ({ ...b, erledigt: POST.erledigt.has(b.id) || b.stand === 'zugestellt' })) });
+    }
+    if (p.startsWith('bild/')) {
+      const i = POST.briefe.findIndex((b) => b.id === p.slice(5) && b.bild);
+      if (i < 0) { res.writeHead(404); return res.end(); }
+      res.writeHead(200, { 'Content-Type': 'image/png' });
+      return res.end(umschlagPNG(480, 300, i));
+    }
+    if (p === 'archiv') {
+      return json({ eintraege: POST.briefe.map((b) => ({ id: b.id, datum: b.datum, absender: b.absender || b.name || '', art: b.art, dienst: b.dienst || '' }))
+        .concat([1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ id: 'x' + n, datum: jetzt - n * 18 * 86400e3, absender: n % 2 ? 'OTTO GmbH & Co KG' : 'Thalia Bücher GmbH', art: 'paket', dienst: n % 2 ? 'hermes' : 'dhl' }))) });
     }
     if (p === 'erledigt' && req.method === 'POST') {
       if (!POST.briefe.some((b) => b.id === d.id)) return json({ message: 'nicht gefunden' }, 404);

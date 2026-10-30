@@ -56,7 +56,7 @@ Kirigami.ScrollablePage {
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Direkt verfolgen") }
         QQC2.Label {
             Layout.maximumWidth: Kirigami.Units.gridUnit * 20
-            text: S.t("Paketbote fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel.")
+            text: S.t("Post & Pakete fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel.")
             wrapMode: Text.Wrap
             font: Kirigami.Theme.smallFont
             color: Kirigami.Theme.disabledTextColor
@@ -132,8 +132,8 @@ Kirigami.ScrollablePage {
         }
 
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Über") }
-        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: "1.2.0" }
-        Kirigami.UrlButton { Kirigami.FormData.label: S.t("Paketbote auf GitHub"); url: "https://github.com/Teyro/Paketbote" }
+        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: "2.0.0" }
+        Kirigami.UrlButton { Kirigami.FormData.label: S.t("Post & Pakete auf GitHub"); url: "https://github.com/Teyro/Post-und-Pakete" }
         Kirigami.UrlButton { Kirigami.FormData.label: S.t("Integration (HACS)"); url: "https://github.com/Teyro/Briefankuendigung-HA" }
     }
 }

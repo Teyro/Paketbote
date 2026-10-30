@@ -1,4 +1,4 @@
-// App-Symbol zeichnen: weißer Karton auf blauem Verlauf, dazu ein gelber Haken-Kreis (angekommen).
+// App-Symbol zeichnen: weißer Brief und gelbes Paket auf blauem Verlauf („Post & Pakete“).
 // Aufruf: swift scripts/symbol.swift <Ordner.iconset> <AppIcon-1024.png>
 import AppKit
 import ImageIO
@@ -29,21 +29,25 @@ func bild(_ px: Int, mac: Bool) -> Data {
         .draw(in: form, angle: -90)
     NSGraphicsContext.current?.restoreGraphicsState()
     NSGradient(colors: [NSColor.white.withAlphaComponent(0.25), NSColor.white.withAlphaComponent(0)])!.draw(in: form, angle: -90)
-    let konfig = NSImage.SymbolConfiguration(pointSize: s * 0.4, weight: .semibold).applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
-    if let sym = NSImage(systemSymbolName: "shippingbox.fill", accessibilityDescription: nil)?.withSymbolConfiguration(konfig) {
+    // Brief (hinten, leicht gedreht) und Paket (vorn rechts) – „Post & Pakete“
+    let brief = NSImage.SymbolConfiguration(pointSize: s * 0.36, weight: .semibold).applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
+    if let sym = NSImage(systemSymbolName: "envelope.fill", accessibilityDescription: nil)?.withSymbolConfiguration(brief), let ctx = NSGraphicsContext.current?.cgContext {
         let g = sym.size
-        sym.draw(in: NSRect(x: (s - g.width) / 2 - s * 0.03, y: (s - g.height) / 2 - s * 0.03, width: g.width, height: g.height))
+        ctx.saveGState()
+        ctx.translateBy(x: s * 0.4, y: s * 0.58)
+        ctx.rotate(by: 8 * .pi / 180)
+        sym.draw(in: NSRect(x: -g.width / 2, y: -g.height / 2, width: g.width, height: g.height))
+        ctx.restoreGState()
     }
-    let kreis = NSRect(x: s * 0.6, y: s * 0.58, width: s * 0.25, height: s * 0.25)
-    NSColor(red: 0.12, green: 0.3, blue: 0.85, alpha: 1).setFill()
-    NSBezierPath(ovalIn: kreis.insetBy(dx: -s * 0.018, dy: -s * 0.018)).fill()
-    NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1).setFill()
-    NSBezierPath(ovalIn: kreis).fill()
-    let haken = NSImage.SymbolConfiguration(pointSize: s * 0.12, weight: .black)
-        .applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(red: 0.12, green: 0.2, blue: 0.5, alpha: 1)]))
-    if let b = NSImage(systemSymbolName: "checkmark", accessibilityDescription: nil)?.withSymbolConfiguration(haken) {
-        let g = b.size
-        b.draw(in: NSRect(x: kreis.midX - g.width / 2, y: kreis.midY - g.height / 2, width: g.width, height: g.height))
+    // Paket mit dunklem Rand, damit es sich vom Brief abhebt
+    let rand = NSImage.SymbolConfiguration(pointSize: s * 0.36, weight: .black).applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(red: 0.12, green: 0.25, blue: 0.72, alpha: 1)]))
+    let paket = NSImage.SymbolConfiguration(pointSize: s * 0.32, weight: .semibold)
+        .applying(NSImage.SymbolConfiguration(paletteColors: [NSColor(red: 1.0, green: 0.8, blue: 0.0, alpha: 1)]))
+    if let r = NSImage(systemSymbolName: "shippingbox.fill", accessibilityDescription: nil)?.withSymbolConfiguration(rand),
+       let p = NSImage(systemSymbolName: "shippingbox.fill", accessibilityDescription: nil)?.withSymbolConfiguration(paket) {
+        let mitte = NSPoint(x: s * 0.62, y: s * 0.36)
+        r.draw(in: NSRect(x: mitte.x - r.size.width / 2, y: mitte.y - r.size.height / 2, width: r.size.width, height: r.size.height))
+        p.draw(in: NSRect(x: mitte.x - p.size.width / 2, y: mitte.y - p.size.height / 2, width: p.size.width, height: p.size.height))
     }
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!

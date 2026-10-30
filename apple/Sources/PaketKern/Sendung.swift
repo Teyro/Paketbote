@@ -130,6 +130,8 @@ public struct Konto: Codable, Hashable, Sendable, Identifiable {
 /// Alles, was Home Assistant liefert: Sendungen (nur Pakete) und Postfächer
 public struct Uebersicht: Codable, Hashable, Sendable {
     public var sendungen: [Sendung]
+    /// Angekündigte Briefe (Deutsche Post, aus Home Assistant)
+    public var briefe: [Brief] = []
     public var konten: [Konto]
     /// Wann die Integration zuletzt ins Postfach geschaut hat
     public var stand: Date?
@@ -138,8 +140,24 @@ public struct Uebersicht: Codable, Hashable, Sendable {
     public var version: Int
     public var geholt: Date
 
-    public init(sendungen: [Sendung] = [], konten: [Konto] = [], stand: Date? = nil, fehler: String = "", version: Int = 0, geholt: Date = Date()) {
-        self.sendungen = sendungen; self.konten = konten; self.stand = stand; self.fehler = fehler; self.version = version; self.geholt = geholt
+    public init(sendungen: [Sendung] = [], briefe: [Brief] = [], konten: [Konto] = [], stand: Date? = nil, fehler: String = "", version: Int = 0,
+                geholt: Date = Date()) {
+        self.sendungen = sendungen; self.briefe = briefe; self.konten = konten; self.stand = stand; self.fehler = fehler; self.version = version
+        self.geholt = geholt
+    }
+
+    enum CodingKeys: String, CodingKey { case sendungen, briefe, konten, stand, fehler, version, geholt }
+
+    // gespeicherte Stände älterer Versionen haben keine Briefe
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sendungen = try c.decode([Sendung].self, forKey: .sendungen)
+        briefe = try c.decodeIfPresent([Brief].self, forKey: .briefe) ?? []
+        konten = try c.decode([Konto].self, forKey: .konten)
+        stand = try c.decodeIfPresent(Date.self, forKey: .stand)
+        fehler = try c.decode(String.self, forKey: .fehler)
+        version = try c.decode(Int.self, forKey: .version)
+        geholt = try c.decode(Date.self, forKey: .geholt)
     }
 
     private static func zeit(_ j: JSON?) -> Date? {
@@ -188,7 +206,12 @@ public struct Uebersicht: Codable, Hashable, Sendable {
                          siebzehn: k["siebzehn"]?.bool ?? false, siebzehnRest: k["siebzehn_rest"]?.zahl.map { Int($0) },
                          dhlLive: k["dhl_live"]?.bool ?? false)
         }
-        return Uebersicht(sendungen: sendungen, konten: konten, stand: zeit(j["stand"]), fehler: j["fehler"]?.text ?? "",
+        let briefListe: [Brief] = briefe.compactMap { b in
+            guard (b["art"]?.text ?? "brief") == "brief", let id = b["id"]?.text, let d = zeit(b["datum"]) else { return nil }
+            return Brief(id: id, datum: d, absender: b["absender"]?.text ?? "", bild: b["bild"]?.bool ?? false, wichtig: b["wichtig"]?.bool ?? false,
+                         erledigt: b["erledigt"]?.bool ?? false, kontoId: b["konto"]?.text ?? "", kontoName: b["konto_name"]?.text ?? "")
+        }.sorted { $0.datum > $1.datum }
+        return Uebersicht(sendungen: sendungen, briefe: briefListe, konten: konten, stand: zeit(j["stand"]), fehler: j["fehler"]?.text ?? "",
                           version: Int(j["version"]?.zahl ?? 1), geholt: geholt)
     }
 
@@ -198,6 +221,7 @@ public struct Uebersicht: Codable, Hashable, Sendable {
         guard !k.isEmpty else { return self }
         var u = self
         u.sendungen = sendungen.filter { $0.kontoId.lowercased() == k || $0.kontoName.lowercased() == k }
+        u.briefe = briefe.filter { $0.kontoId.lowercased() == k || $0.kontoName.lowercased() == k }
         return u
     }
 

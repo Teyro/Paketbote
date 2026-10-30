@@ -13,6 +13,7 @@ import "gemeinsam/sprache.js" as S
 KCM.SimpleKCM {
     property alias cfg_mitteilungen: mitteilungen.checked
     property alias cfg_updatesSuchen: updates.checked
+    property string cfg_inhalt: "alle"
 
     Settings {
         id: gemeinsam
@@ -43,6 +44,12 @@ KCM.SimpleKCM {
             color: Kirigami.Theme.disabledTextColor
         }
         Item { Kirigami.FormData.isSection: true }
+        QQC2.ComboBox {
+            Kirigami.FormData.label: S.t("Zeigen")
+            model: [S.t("Briefe und Pakete"), S.t("Nur Briefe"), S.t("Nur Pakete")]
+            currentIndex: Math.max(0, ["alle", "briefe", "pakete"].indexOf(cfg_inhalt))
+            onActivated: (i) => cfg_inhalt = ["alle", "briefe", "pakete"][i]
+        }
         QQC2.CheckBox { id: mitteilungen; text: S.t("Mitteilungen bei neuem Stand") }
         QQC2.CheckBox { id: updates; text: S.t("Nach Updates suchen") }
     }

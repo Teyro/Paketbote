@@ -62,8 +62,8 @@ struct HinzufuegenAnsicht: View {
                     Toggle(T("Rücksendung"), isOn: $ruecksendung)
                 } footer: {
                     Text(kern.einstellungen.eingerichtet && kern.einstellungen.auchInHA
-                         ? T("Paketbote fragt selbst bei den Anbietern nach und trägt die Sendung auch in Home Assistant ein.")
-                         : T("Paketbote fragt selbst bei den Anbietern nach – auch ohne Home Assistant."))
+                         ? T("Post & Pakete fragt selbst bei den Anbietern nach und trägt die Sendung auch in Home Assistant ein.")
+                         : T("Post & Pakete fragt selbst bei den Anbietern nach – auch ohne Home Assistant."))
                 }
             }
             .formStyle(.grouped)

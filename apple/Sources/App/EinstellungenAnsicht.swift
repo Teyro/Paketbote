@@ -63,7 +63,7 @@ struct EinstellungenAnsicht: View {
 
             Section(T("Über")) {
                 LabeledContent(T("Version"), value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")
-                Link(T("Paketbote auf GitHub"), destination: URL(string: "https://github.com/Teyro/Paketbote")!)
+                Link(T("Post & Pakete auf GitHub"), destination: URL(string: "https://github.com/Teyro/Post-und-Pakete")!)
                 Link(T("Integration „Briefankündigung“ (HACS)"), destination: URL(string: "https://github.com/Teyro/Briefankuendigung-HA")!)
                 if !Ablage.gruppeDa {
                     Text(T("Widgets: Die Signatur (z. B. Signulous) erlaubt keine App-Gruppe. Das Widget lange drücken → „Widget bearbeiten“ → Home-Assistant-Adresse und Token eintragen; direkt verfolgte Sendungen zeigt es nach dem nächsten Öffnen der App."))
@@ -139,7 +139,7 @@ struct DirektEinstellungen: View {
             Text(T("Direkt verfolgen – Anbieter"))
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
-                Text(T("Paketbote fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel. Die Schlüssel bleiben im Schlüsselbund dieses Geräts."))
+                Text(T("Post & Pakete fragt die eingeschalteten Anbieter der Reihe nach. Antwortet einer nicht oder kennt die Nummer nicht, springt der nächste ein. DHL und Deutsche Post gehen ohne Schlüssel; für Hermes, DPD, GLS und UPS hilft ein 17TRACK- oder Ship24-Schlüssel. Die Schlüssel bleiben im Schlüsselbund dieses Geräts."))
                 Link(T("DHL-Schlüssel (kostenlos)"), destination: URL(string: "https://developer.dhl.com")!)
                 Link(T("UPS-Zugang (kostenlos)"), destination: URL(string: "https://developer.ups.com")!)
                 Link(T("17TRACK-Schlüssel (200 Sendungen frei)"), destination: URL(string: "https://api.17track.net")!)

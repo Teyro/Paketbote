@@ -8,7 +8,7 @@ import PaketKern
 @Observable
 final class Aktualisierer {
     static let shared = Aktualisierer()
-    static let projekt = "https://github.com/Teyro/Paketbote/releases/download/"
+    static let projekt = "https://github.com/Teyro/Post-und-Pakete/releases/download/"
 
     let aktuelleVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
     private(set) var neueVersion: String?
@@ -16,7 +16,7 @@ final class Aktualisierer {
     private(set) var fehler = ""
 
     func pruefen() async {
-        guard let url = URL(string: "https://api.github.com/repos/Teyro/Paketbote/releases/latest") else { return }
+        guard let url = URL(string: "https://api.github.com/repos/Teyro/Post-und-Pakete/releases/latest") else { return }
         var r = URLRequest(url: url)
         r.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         guard let (d, a) = try? await URLSession.shared.data(for: r), (a as? HTTPURLResponse)?.statusCode == 200, let j = JSON.lesen(d),
@@ -25,7 +25,7 @@ final class Aktualisierer {
         guard v.compare(aktuelleVersion, options: .numeric) == .orderedDescending else { neueVersion = nil; return }
         // nur Downloads aus diesem Projekt
         downloadURL = (j["assets"]?.liste ?? []).compactMap { a -> URL? in
-            guard let n = a["name"]?.text, n.hasPrefix("Paketbote-macOS-"), n.hasSuffix(".zip"),
+            guard let n = a["name"]?.text, n.hasPrefix("PostUndPakete-macOS-"), n.hasSuffix(".zip"),
                   let s = a["browser_download_url"]?.text, s.hasPrefix(Self.projekt), !s.contains("..") else { return nil }
             return URL(string: s)
         }.first
@@ -42,8 +42,8 @@ final class Aktualisierer {
             let zip = ordner.appendingPathComponent("update.zip")
             try FileManager.default.moveItem(at: datei, to: zip)
             try ausfuehren("/usr/bin/ditto", ["-x", "-k", zip.path, ordner.path])
-            let neu = ordner.appendingPathComponent("Paketbote.app")
-            guard Bundle(url: neu)?.bundleIdentifier == "de.teyro.paketbote" else { throw Fehler(T("Die geladene Datei ist nicht Paketbote.")) }
+            let neu = ordner.appendingPathComponent("Post & Pakete.app")
+            guard Bundle(url: neu)?.bundleIdentifier == "de.teyro.paketbote" else { throw Fehler(T("Die geladene Datei ist nicht Post & Pakete.")) }
             try ausfuehren("/usr/bin/codesign", ["--verify", "--deep", "--strict", neu.path])
             try? ausfuehren("/usr/bin/xattr", ["-dr", "com.apple.quarantine", neu.path])
             austauschenUndNeuStarten(neu)

@@ -23,9 +23,10 @@ bauen() {  # Schema, SDK/Ziel, Log, weitere Einstellungen
 
 # Mac
 bauen Paketbote-Mac "-destination generic/platform=macOS" mac
-cp -R build/dd/Build/Products/Release/Paketbote.app build/
-codesign --verify --deep --strict build/Paketbote.app && echo "Mac: Signatur ok"
-(cd build && ditto -c -k --sequesterRsrc --keepParent Paketbote.app "Paketbote-macOS-$VERSION.zip")
+# im Finder heißt die App „Post & Pakete“ (das Umbenennen des Ordners lässt die Signatur gültig)
+cp -R build/dd/Build/Products/Release/Paketbote.app "build/Post & Pakete.app"
+codesign --verify --deep --strict "build/Post & Pakete.app" && echo "Mac: Signatur ok"
+(cd build && ditto -c -k --sequesterRsrc --keepParent "Post & Pakete.app" "PostUndPakete-macOS-$VERSION.zip")
 
 # iPhone/iPad (Gerät): ohne Profil bauen, dann selbst ad hoc mit den Berechtigungen (App-Gruppe) signieren –
 # Signulous signiert beim Installieren mit dem eigenen Zertifikat neu und übernimmt die Berechtigungen.
@@ -40,7 +41,7 @@ echo "iPhone: Berechtigungen"; codesign -d --entitlements - build/ipa/Payload/Pa
 echo "iPhone: Symbol im Info.plist"; plutil -p "$APP/Info.plist" | grep -A6 CFBundleIcons || { echo "FEHLER: kein App-Symbol"; exit 1; }
 ls "$APP" | grep -i appicon
 mkdir -p bilder-ci && cp ressourcen/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png bilder-ci/
-(cd build/ipa && zip -qry "../Paketbote-iOS-$VERSION.ipa" Payload)
+(cd build/ipa && zip -qry "../PostUndPakete-iOS-$VERSION.ipa" Payload)
 
 # Zweite IPA mit Apple-Watch-App (eigene Datei – falls das Neu-Signieren mit der Uhr Probleme macht, bleibt die erste)
 bauen Paketbote-Uhr "-sdk watchos -destination generic/platform=watchOS" uhr "CODE_SIGNING_ALLOWED=NO"
@@ -50,5 +51,5 @@ mkdir -p build/ipa-uhr/Payload/Paketbote.app/Watch
 cp -R "build/dd/Build/Products/Release-watchos/Paketbote Uhr.app" build/ipa-uhr/Payload/Paketbote.app/Watch/
 codesign -f -s - "build/ipa-uhr/Payload/Paketbote.app/Watch/Paketbote Uhr.app"
 codesign -f -s - --entitlements ressourcen/iOS.entitlements build/ipa-uhr/Payload/Paketbote.app
-(cd build/ipa-uhr && zip -qry "../Paketbote-iOS-mit-Uhr-$VERSION.ipa" Payload)
-echo "Fertig: build/Paketbote-macOS-$VERSION.zip, build/Paketbote-iOS-$VERSION.ipa, build/Paketbote-iOS-mit-Uhr-$VERSION.ipa"
+(cd build/ipa-uhr && zip -qry "../PostUndPakete-iOS-mit-Uhr-$VERSION.ipa" Payload)
+echo "Fertig: build/PostUndPakete-macOS-$VERSION.zip, build/PostUndPakete-iOS-$VERSION.ipa, build/PostUndPakete-iOS-mit-Uhr-$VERSION.ipa"

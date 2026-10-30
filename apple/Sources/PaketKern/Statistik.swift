@@ -19,6 +19,8 @@ public struct Statistik: Equatable, Sendable {
         public var schluessel: String   // "2026-10"
         public var name: String         // "Okt"
         public var anzahl: Int
+        /// Briefe in diesem Monat
+        public var briefe: Int = 0
     }
     public var monate: [Monat] = []
     public var shops: [(name: String, anzahl: Int)] = []
@@ -26,6 +28,7 @@ public struct Statistik: Equatable, Sendable {
     /// Durchschnittliche Tage von der ersten Meldung bis zur Zustellung je Dienst
     public var laufzeit: [(dienst: String, tage: Double)] = []
     public var gesamt = 0
+    public var briefeGesamt = 0
 
     public static func == (a: Statistik, b: Statistik) -> Bool {
         a.monate == b.monate && a.gesamt == b.gesamt && a.shops.map(\.name) == b.shops.map(\.name)
@@ -38,13 +41,16 @@ public struct Statistik: Equatable, Sendable {
             pakete.append(ArchivEintrag(datum: s.ereignisse.last?.zeit ?? s.datum, absender: s.titel, paket: true, dienst: s.dienst))
         }
         gesamt = pakete.count
+        let briefe = archiv.filter { !$0.paket }
+        briefeGesamt = briefe.count
         let namen = [T("Jan"), T("Feb"), T("Mär"), T("Apr"), T("Mai"), T("Jun"), T("Jul"), T("Aug"), T("Sep"), T("Okt"), T("Nov"), T("Dez")]
         for i in (0..<12).reversed() {
             guard let d = kalender.date(byAdding: .month, value: -i, to: jetzt) else { continue }
             let k = kalender.dateComponents([.year, .month], from: d)
             let schluessel = String(format: "%04d-%02d", k.year ?? 0, k.month ?? 0)
             let n = pakete.filter { kalender.dateComponents([.year, .month], from: $0.datum) == k }.count
-            monate.append(Monat(schluessel: schluessel, name: namen[(k.month ?? 1) - 1], anzahl: n))
+            let nb = briefe.filter { kalender.dateComponents([.year, .month], from: $0.datum) == k }.count
+            monate.append(Monat(schluessel: schluessel, name: namen[(k.month ?? 1) - 1], anzahl: n, briefe: nb))
         }
         var s: [String: Int] = [:], d: [String: Int] = [:]
         for p in pakete {

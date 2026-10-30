@@ -43,7 +43,7 @@ final class UhrZustand: NSObject, WCSessionDelegate {
     }
 
     func laden() async {
-        guard ha.eingerichtet else { fehler = uebersicht == nil ? T("Paketbote auf dem iPhone öffnen.") : ""; return }
+        guard ha.eingerichtet else { fehler = uebersicht == nil ? T("Post & Pakete auf dem iPhone öffnen.") : ""; return }
         do {
             var u = try await ha.laden()
             u.sendungen = zusammenfuehren(ha: u.sendungen, direkt: (uebersicht?.sendungen ?? []).filter { $0.quelle == "direkt" })
@@ -79,13 +79,21 @@ struct UhrListe: View {
     let zustand: UhrZustand
     var body: some View {
         let g = Gruppen(zustand.uebersicht?.sendungen ?? [])
+        let b = BriefGruppen(zustand.uebersicht?.briefe ?? [])
         List {
             if !zustand.fehler.isEmpty { Text(zustand.fehler).font(.footnote).foregroundStyle(.secondary) }
+            if !b.heute.isEmpty {
+                Section(T("Briefe heute")) {
+                    ForEach(b.heute) { br in
+                        Label { Text(br.titel).lineLimit(2) } icon: { Image(systemName: br.wichtig ? "envelope.badge.fill" : "envelope.fill").foregroundStyle(br.wichtig ? .red : .primary) }
+                    }
+                }
+            }
             if !g.heute.isEmpty { Section(T("Heute")) { ForEach(g.heute) { UhrZeile(sendung: $0) } } }
             if !g.unterwegs.isEmpty { Section(T("Unterwegs")) { ForEach(g.unterwegs) { UhrZeile(sendung: $0) } } }
             if g.aktiv.isEmpty && zustand.fehler.isEmpty { Text(T("Keine Pakete unterwegs")).foregroundStyle(.secondary) }
         }
-        .navigationTitle(T("Pakete"))
+        .navigationTitle(T("Post & Pakete"))
         .refreshable { await zustand.laden() }
     }
 }

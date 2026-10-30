@@ -1,6 +1,6 @@
-# Paketbote
+# Post & Pakete
 
-**Parcel tracking for iPhone, iPad, Mac and Linux – DHL, Hermes, DPD, GLS, UPS and Amazon.**
+**Announced letters and parcels – on iPhone, iPad, Apple Watch, Mac and Linux. DHL, Deutsche Post, Hermes, DPD, GLS, UPS and Amazon.**
 Like the app *Parcel*, but without someone else’s server: the hub is your Home Assistant with the integration
 [Briefankündigung](https://github.com/Teyro/Briefankuendigung-HA) (1.5 or later). It reads the carriers’ shipping
 mails, optionally asks DHL and 17TRACK for the live status, and keeps all your devices in sync.
@@ -18,12 +18,18 @@ mails, optionally asks DHL and 17TRACK for the live status, and keeps all your d
 - **Several Amazon accounts:** each parcel shows whose it is (customer accounts in the integration)
 - **Notifications** for “arriving today”, “ready for pickup”, “delivered” and problems
 - **Widgets:** iPhone (home and lock screen), Mac (desktop), Plasma (panel and desktop tile)
-- **Siri & Shortcuts:** “Which parcels arrive today with Paketbote?”, “Track a shipment with Paketbote”
+- **Siri & Shortcuts:** “Which parcels arrive today with Post & Pakete?”, “Track a shipment with Post & Pakete”
 - German and English, light and dark, updates (one click on Mac and Linux)
 
-## New in 1.2: track directly – even without Home Assistant
+## New in 2.0: Post & Pakete – one app for letters and parcels
 
-Type, paste or **scan** a tracking number – Paketbote fetches status, history and map itself. Several providers are asked in
+*Post & Pakete*, *Briefankündigung Desktop* and the Scriptable widget become one app: **letters** (envelope picture,
+“important”, arrived, reminders, notes) and **parcels** in one list – Today · On the way · Arrived – with
+“All | Letters | Parcels”. Widgets, Siri, menu bar, Plasma widget and KRunner show both. New icon.
+
+## Track directly – even without Home Assistant
+
+Type, paste or **scan** a tracking number – Post & Pakete fetches status, history and map itself. Several providers are asked in
 turn; if one fails, the next one steps in. Each can be switched on or off in the settings: DHL (official key),
 **DHL without key** (dhl.de, fallback deutschepost.de), UPS (official), 17TRACK, Ship24, public GLS/DPD pages.
 
@@ -51,19 +57,19 @@ Home Assistant address and token; it then loads by itself.
    - **Send notifications to** the Home Assistant app on your iPhone – the most reliable push notifications.
 3. Create a **long-lived access token** (your name at the bottom left → Security).
 
-Amazon, Hermes and DPD have no open API for consumers. Paketbote deliberately does **not** log in with your
+Amazon, Hermes and DPD have no open API for consumers. Post & Pakete deliberately does **not** log in with your
 account there – the shipping mails and 17TRACK are enough.
 
 ## Installation
 
-**iPhone/iPad:** upload `Paketbote-iOS-x.y.z.ipa` from the [releases](https://github.com/Teyro/Paketbote/releases) to
+**iPhone/iPad:** upload `Post & Pakete-iOS-x.y.z.ipa` from the [releases](https://github.com/Teyro/Post-und-Pakete/releases) to
 Signulous and install it. Enter address and token on first start; add widgets as usual. The app shows new versions at the top.
 
-**Mac:** download `Paketbote-macOS-x.y.z.zip` and move `Paketbote.app` to Applications. First start: right-click → Open
-(the app is not notarised). Updates: menu *Paketbote → Check for updates*.
+**Mac:** download `Post & Pakete-macOS-x.y.z.zip` and move `Post & Pakete.app` to Applications. First start: right-click → Open
+(the app is not notarised). Updates: menu *Post & Pakete → Check for updates*.
 
 **Linux:** extract `paketbote-linux-x.y.z.tar.gz` and run `sh paketbote/installieren.sh` (no root needed). Then
-*Paketbote* is in the application menu and – on Plasma 6 – in the widget list. Needs Qt 6 and Kirigami
+*Post & Pakete* is in the application menu and – on Plasma 6 – in the widget list. Needs Qt 6 and Kirigami
 (included with KDE Plasma). The Plasma widget installs updates with one click.
 
 ## Development

@@ -195,3 +195,69 @@ function zusammenfuehren(ha, direkt) {
     });
     return erg;
 }
+
+// --- Briefe (Deutsche Post Briefankündigung, nur mit Home Assistant) ---
+
+/** Antwort von /api/briefankuendigung/briefe → nur die Briefe */
+function briefeAus(antwort) {
+    return ((antwort && antwort.briefe) || []).filter(function (b) { return (b.art || "brief") === "brief"; }).map(function (b) {
+        return { id: b.id, datum: b.datum || 0, absender: b.absender || "", bild: !!b.bild, wichtig: !!b.wichtig, erledigt: !!b.erledigt,
+                 kontoId: b.konto || "", kontoName: b.konto_name || "", brief: true };
+    }).sort(function (a, b) { return b.datum - a.datum; });
+}
+
+function briefTitel(b) { return b.absender || t("Absender unbekannt"); }
+
+/** {heute, unterwegs, angekommen, offen}: älter als `tage` Tage zählt als angekommen */
+function briefGruppen(liste, jetzt, tage) {
+    var g = { heute: [], unterwegs: [], angekommen: [] };
+    var grenze = jetzt - (tage || 5) * 86400000, heute = new Date(jetzt).toDateString();
+    (liste || []).forEach(function (b) {
+        if (b.erledigt || b.datum < grenze) { if (b.datum >= jetzt - 14 * 86400000) g.angekommen.push(b); }
+        else if (new Date(b.datum).toDateString() === heute) g.heute.push(b);
+        else g.unterwegs.push(b);
+    });
+    var w = function (a, b) { return a.wichtig !== b.wichtig ? (a.wichtig ? -1 : 1) : b.datum - a.datum; };
+    g.heute.sort(w); g.unterwegs.sort(w);
+    g.offen = g.heute.concat(g.unterwegs);
+    return g;
+}
+
+/** „heute“, „gestern“, „Mo 26.10.“ */
+function tagText(ms, jetzt) {
+    var d = new Date(ms), h = new Date(jetzt);
+    if (d.toDateString() === h.toDateString()) return t("heute");
+    if (d.toDateString() === new Date(jetzt - 86400000).toDateString()) return t("gestern");
+    return t(TAGE[d.getDay()]) + " " + d.getDate() + "." + (d.getMonth() + 1) + ".";
+}
+
+/** „angekündigt heute · Johanna“ bzw. „angekommen“ */
+function briefZeile(b, jetzt, mitKonto) {
+    var teile = [b.erledigt ? t("angekommen") : t("angekündigt %1", tagText(b.datum, jetzt))];
+    if (mitKonto && b.kontoName) teile.push(b.kontoName);
+    return teile.join(" · ");
+}
+
+function briefeAnzahl(n) { return n === 1 ? t("1 Brief") : t("%1 Briefe", n); }
+
+/** Kopf: „2 Briefe, 3 Pakete unterwegs“ */
+function postTitel(briefe, pakete) {
+    var teile = [];
+    if (briefe.length) teile.push(briefeAnzahl(briefe.length));
+    if (pakete.length) teile.push(anzahl(pakete.length));
+    return teile.length ? t("%1 unterwegs", teile.join(", ")) : t("Keine Post unterwegs");
+}
+
+/** Bytes eines Umschlagbilds → data:-Adresse (QML-Bilder können keinen Token mitschicken) */
+var _B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function bildAdresse(bytes) {
+    var typ = bytes[0] === 0x89 && bytes[1] === 0x50 ? "image/png" : bytes[0] === 0x47 && bytes[1] === 0x49 ? "image/gif"
+            : bytes[0] === 0x52 && bytes[1] === 0x49 ? "image/webp" : "image/jpeg";
+    var teile = [], n = bytes.length;
+    for (var i = 0; i < n; i += 3) {
+        var a = bytes[i], b = i + 1 < n ? bytes[i + 1] : 0, c = i + 2 < n ? bytes[i + 2] : 0;
+        var x = (a << 16) | (b << 8) | c;
+        teile.push(_B64.charAt((x >> 18) & 63) + _B64.charAt((x >> 12) & 63) + (i + 1 < n ? _B64.charAt((x >> 6) & 63) : "=") + (i + 2 < n ? _B64.charAt(x & 63) : "="));
+    }
+    return "data:" + typ + ";base64," + teile.join("");
+}

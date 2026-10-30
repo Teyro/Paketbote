@@ -61,4 +61,21 @@ assert.equal(A.BESCHREIBUNG.length, 7);
 const ha = L.sendungenAus({ briefe: [{ id: 'x', datum: jetzt, art: 'paket', name: 'Test', sendung: '00340434161094015902', dienst: 'dhl' }] });
 const m = L.zusammenfuehren(ha, [{ id: 'd', datum: jetzt, nummer: '00340434161094015902', dienst: 'dhl', stand: 'zugestellt', ereignisse: [{ zeit: jetzt, text: 'Abgeholt' }], quelle: 'direkt' }]);
 assert.equal(m.length, 1); assert.equal(m[0].id, 'x'); assert.equal(m[0].stand, 'zugestellt');
+// Briefe
+const br = L.briefeAus({ briefe: [
+  { id: 'b1', datum: jetzt - 3600e3, art: 'brief', absender: 'AOK', bild: true },
+  { id: 'b2', datum: jetzt - 1800e3, art: 'brief', absender: 'Finanzamt', wichtig: true },
+  { id: 'b3', datum: jetzt - 30 * 3600e3, art: 'brief', absender: '' },
+  { id: 'b4', datum: jetzt - 8 * 86400e3, art: 'brief', absender: 'Alt' },
+  { id: 'p9', datum: jetzt, art: 'paket', absender: 'kein Brief' }] });
+assert.equal(br.length, 4);
+const bg = L.briefGruppen(br, jetzt, 5);
+assert.equal(JSON.stringify(bg.heute.map((x) => x.id)), JSON.stringify(['b2', 'b1']), 'wichtige zuerst');
+assert.equal(JSON.stringify(bg.unterwegs.map((x) => x.id)), JSON.stringify(['b3']));
+assert.equal(JSON.stringify(bg.angekommen.map((x) => x.id)), JSON.stringify(['b4']));
+assert.equal(L.briefTitel(br[2]), 'Absender unbekannt');
+assert.equal(L.briefZeile(br[0], jetzt, false), 'angekündigt heute');
+assert.equal(L.postTitel(bg.offen, g.aktiv), '3 Briefe, 4 Pakete unterwegs');
+assert.equal(L.postTitel([], []), 'Keine Post unterwegs');
+assert.ok(L.bildAdresse(new Uint8Array([0x89, 0x50, 1, 2])).startsWith('data:image/png;base64,iVA'));
 console.log('logik.js: alle Prüfungen bestanden');

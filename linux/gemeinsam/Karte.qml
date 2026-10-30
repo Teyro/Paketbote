@@ -15,7 +15,7 @@ Map {
 
     plugin: Plugin {
         name: "osm"
-        PluginParameter { name: "osm.useragent"; value: "Paketbote/1.2 (github.com/Teyro/Paketbote)" }
+        PluginParameter { name: "osm.useragent"; value: "PostUndPakete/2.0 (github.com/Teyro/Post-und-Pakete)" }
         PluginParameter { name: "osm.mapping.providersrepository.disabled"; value: true }
     }
     zoomLevel: 6

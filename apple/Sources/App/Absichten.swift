@@ -4,14 +4,14 @@ import PaketKern
 // Siri und Kurzbefehle: „Welche Pakete kommen heute?“, „Sendung hinzufügen“
 
 struct PaketeHeuteAbsicht: AppIntent {
-    static let title: LocalizedStringResource = "Welche Pakete kommen heute?"
-    static let description = IntentDescription("Sagt, welche Pakete heute kommen oder zur Abholung bereitliegen.")
+    static let title: LocalizedStringResource = "Was kommt heute?"
+    static let description = IntentDescription("Sagt, welche Briefe und Pakete heute kommen oder zur Abholung bereitliegen.")
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<String> {
         let u = try await Kern.shared.ha.laden()
         Ablage.schreiben(u)
-        let satz = Texte.heuteSatz(Gruppen(u.sendungen))
+        let satz = Texte.postSatz(BriefGruppen(u.briefe), Gruppen(u.sendungen))
         return .result(value: satz, dialog: IntentDialog(stringLiteral: satz))
     }
 }
@@ -48,10 +48,12 @@ extension HAFehler: CustomLocalizedStringResourceConvertible {
 struct PaketboteKurzbefehle: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: PaketeHeuteAbsicht(), phrases: [
+            "Was kommt heute mit \(.applicationName)?",
             "Welche Pakete kommen heute mit \(.applicationName)?",
+            "Kommt heute Post mit \(.applicationName)?",
             "Kommt heute ein Paket mit \(.applicationName)?",
             "\(.applicationName) heute",
-        ], shortTitle: "Pakete heute", systemImageName: "shippingbox")
+        ], shortTitle: "Was kommt heute?", systemImageName: "tray.full")
         AppShortcut(intent: SendungHinzufuegenAbsicht(), phrases: [
             "Sendung mit \(.applicationName) verfolgen",
             "Paket zu \(.applicationName) hinzufügen",

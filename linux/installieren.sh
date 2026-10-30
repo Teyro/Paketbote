@@ -31,15 +31,15 @@ mkdir -p "$ANW"
 cat > "$ANW/de.teyro.paketbote.desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Paketbote
-GenericName=Paketverfolgung
-GenericName[en]=Parcel tracking
-Comment=Sendungen von DHL, Hermes, DPD, GLS, UPS und Amazon über Home Assistant
-Comment[en]=Shipments from DHL, Hermes, DPD, GLS, UPS and Amazon via Home Assistant
+Name=Post & Pakete
+GenericName=Briefe und Pakete
+GenericName[en]=Letters and parcels
+Comment=Angekündigte Briefe und Pakete von DHL, Hermes, DPD, GLS, UPS und Amazon
+Comment[en]=Announced letters and parcels from DHL, Hermes, DPD, GLS, UPS and Amazon
 Exec=env QT_QUICK_CONTROLS_STYLE=org.kde.desktop "$QML" -a widget "$ZIEL/app/main.qml"
 Icon=$ZIEL/paketbote.svg
 Categories=Utility;Network;
-Keywords=Paket;DHL;Hermes;DPD;GLS;UPS;Amazon;Sendung;parcel;tracking;
+Keywords=Brief;Post;Paket;DHL;Hermes;DPD;GLS;UPS;Amazon;Sendung;parcel;tracking;
 StartupWMClass=qml
 DESKTOP
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$ANW" 2>/dev/null || true
@@ -58,7 +58,7 @@ fi
 # Benachrichtigungen (KDE)
 mkdir -p "${XDG_DATA_HOME:-$HOME/.local/share}/knotifications6"
 cp "$HIER/paketbote.notifyrc" "${XDG_DATA_HOME:-$HOME/.local/share}/knotifications6/paketbote.notifyrc"
-echo "App installiert: Startmenü → Paketbote"
+echo "App installiert: Startmenü → Post & Pakete"
 
 # Plasma-Widget
 if command -v kpackagetool6 >/dev/null 2>&1; then
@@ -71,5 +71,5 @@ if command -v kpackagetool6 >/dev/null 2>&1; then
     kpackagetool6 -t Plasma/Applet -i "$TMP/package" >/dev/null
   fi
   rm -rf "$TMP"
-  echo "Plasma-Widget installiert: Rechtsklick auf den Schreibtisch bzw. das Panel → Widgets hinzufügen → Paketbote"
+  echo "Plasma-Widget installiert: Rechtsklick auf den Schreibtisch bzw. das Panel → Widgets hinzufügen → Post & Pakete"
 fi

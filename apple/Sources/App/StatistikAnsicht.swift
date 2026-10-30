@@ -14,17 +14,21 @@ struct StatistikAnsicht: View {
         List {
             Section {
                 Chart(st.monate) { m in
-                    BarMark(x: .value(T("Monat"), m.name), y: .value(T("Pakete"), m.anzahl))
-                        .foregroundStyle(Color.accentColor.gradient)
+                    BarMark(x: .value(T("Monat"), m.name), y: .value(T("Anzahl"), m.anzahl))
+                        .foregroundStyle(by: .value(T("Art"), T("Pakete")))
+                        .cornerRadius(4)
+                    BarMark(x: .value(T("Monat"), m.name), y: .value(T("Anzahl"), m.briefe))
+                        .foregroundStyle(by: .value(T("Art"), T("Briefe")))
                         .cornerRadius(4)
                 }
+                .chartForegroundStyleScale([T("Pakete"): Color.accentColor, T("Briefe"): Color.orange])
                 .chartXAxis { AxisMarks { _ in AxisValueLabel() } }
                 .frame(height: 180)
                 .padding(.vertical, 6)
             } header: {
-                Text(T("Pakete pro Monat"))
+                Text(T("Post pro Monat"))
             } footer: {
-                Text(laedt ? T("Lade das Archiv …") : T("%1 in den letzten zwei Jahren.", Texte.anzahl(st.gesamt)))
+                Text(laedt ? T("Lade das Archiv …") : T("%1 und %2 in den letzten zwei Jahren.", Texte.anzahl(st.gesamt), Texte.briefe(st.briefeGesamt)))
             }
             if !st.shops.isEmpty {
                 Section(T("Häufigste Absender")) {

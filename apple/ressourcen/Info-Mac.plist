@@ -6,8 +6,8 @@
 	<key>CFBundleLocalizations</key><array><string>de</string><string>en</string></array>
 	<key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleName</key><string>Paketbote</string>
-	<key>CFBundleDisplayName</key><string>Paketbote</string>
+	<key>CFBundleName</key><string>Post &amp; Pakete</string>
+	<key>CFBundleDisplayName</key><string>Post &amp; Pakete</string>
 	<key>CFBundlePackageType</key><string>APPL</string>
 	<key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key><string>$(MARKETING_VERSION)</string>
@@ -22,7 +22,8 @@
 	</dict></array>
 	<key>NSAppTransportSecurity</key>
 	<dict><key>NSAllowsArbitraryLoads</key><true/><key>NSAllowsLocalNetworking</key><true/></dict>
-	<key>NSLocalNetworkUsageDescription</key><string>Paketbote verbindet sich mit Home Assistant in deinem Heimnetz.</string>
-	<key>NSHumanReadableCopyright</key><string>GPL-3.0-or-later · github.com/Teyro/Paketbote</string>
+	<key>NSRemindersFullAccessUsageDescription</key><string>Für Erinnerungen an Briefe (z. B. eine Frist).</string>
+	<key>NSLocalNetworkUsageDescription</key><string>Post &amp; Pakete verbindet sich mit Home Assistant in deinem Heimnetz.</string>
+	<key>NSHumanReadableCopyright</key><string>GPL-3.0-or-later · github.com/Teyro/Post-und-Pakete</string>
 </dict>
 </plist>

@@ -18,6 +18,11 @@ QtObject {
 
     /// Sendungen aus Home Assistant
     property var haSendungen: []
+    /// Angekündigte Briefe (nur mit Home Assistant)
+    property var briefe: []
+    /// Brief-ID → data:-Adresse des Umschlagbilds
+    property var bilder: ({})
+    property var bekannteBriefe: ({})
     /// Direkt verfolgte Sendungen (der Besitzer speichert sie bei direktGeaendert)
     property var direkt: []
     /// Schlüssel der Anbieter: {dhl, upsId, upsGeheim, siebzehn, ship24, oeffentlich}
@@ -54,6 +59,9 @@ QtObject {
     function neuVerbinden() {
         abgelehnt = false;
         haSendungen = [];
+        briefe = [];
+        bilder = {};
+        bekannteBriefe = {};
         geladen = !eingerichtet;
         verzoegert.restart();
     }
@@ -143,6 +151,21 @@ QtObject {
             konten = j.konten || [];
             version = j.version || 1;
             haSendungen = neu;
+            var nb = Logik.briefeAus(j).filter(function (b) { return !k || b.kontoId.toLowerCase() === k || b.kontoName.toLowerCase() === k; });
+            // neue Briefe von heute melden (nicht beim ersten Laden)
+            if (geladen) {
+                var heute = new Date().toDateString();
+                var neueBriefe = nb.filter(function (b) { return !bekannteBriefe[b.id] && !b.erledigt && new Date(b.datum).toDateString() === heute; });
+                if (neueBriefe.length)
+                    neuerStand((neueBriefe.some(function (b) { return b.wichtig; }) ? "⚠️ " : "✉️ ")
+                               + (neueBriefe.length === 1 ? S.t("Brief angekündigt") : S.t("%1 angekündigt", Logik.briefeAnzahl(neueBriefe.length))),
+                               neueBriefe.map(function (b) { return (b.wichtig ? "⚠️ " : "") + Logik.briefTitel(b); }).join(", "), neueBriefe[0].id);
+            }
+            var bk = {};
+            nb.forEach(function (b) { bk[b.id] = true; });
+            bekannteBriefe = bk;
+            briefe = nb;
+            nb.slice(0, 30).forEach(function (b) { if (b.bild && !bilder[b.id]) bildLaden(b.id); });
             fehler = "";
             geladen = true;
             pruefeMitteilungen();
@@ -161,6 +184,28 @@ QtObject {
             if (!text) laden();
             fertig(text);
         });
+    }
+
+    function bildLaden(id) {
+        var x = new XMLHttpRequest();
+        x.open("GET", basis + "/api/briefankuendigung/bild/" + id);
+        x.setRequestHeader("Authorization", "Bearer " + token.trim());
+        x.responseType = "arraybuffer";
+        x.onreadystatechange = function () {
+            if (x.readyState !== XMLHttpRequest.DONE || x.status !== 200 || !x.response) return;
+            var neu = Object.assign({}, bilder);
+            neu[id] = Logik.bildAdresse(new Uint8Array(x.response));
+            bilder = neu;
+        };
+        x.send();
+    }
+
+    function brief(id) { return briefe.find(function (b) { return b.id === id; }) || null; }
+
+    /// Brief als angekommen markieren (gilt über Home Assistant auf allen Geräten)
+    function briefErledigt(id, ja) {
+        briefe = briefe.map(function (b) { return b.id === id ? Object.assign({}, b, { erledigt: ja }) : b; });
+        anfrage("POST", "/api/briefankuendigung/erledigt", { id: id, erledigt: ja }, function (j, text) { if (text) meldung(text); laden(); });
     }
 
     function sendung(id) { return sendungen.find(function (s) { return s.id === id; }) || null; }

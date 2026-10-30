@@ -13,15 +13,17 @@ struct Hauptansicht: View {
     var body: some View {
         NavigationSplitView {
             SendungsListe(kern: kern)
-                .navigationTitle(T("Pakete"))
+                .navigationTitle(T("Post & Pakete"))
                 #if os(macOS)
                 .navigationSplitViewColumnWidth(min: 300, ideal: 340)
                 #endif
         } detail: {
             if let s = kern.sendung(kern.auswahl) {
                 DetailAnsicht(kern: kern, sendung: s)
+            } else if let b = kern.brief(kern.auswahl) {
+                BriefDetail(kern: kern, brief: b)
             } else {
-                ContentUnavailableView(T("Keine Sendung gewählt"), systemImage: "shippingbox", description: Text(T("Links eine Sendung wählen.")))
+                ContentUnavailableView(T("Nichts gewählt"), systemImage: "tray", description: Text(T("Links einen Brief oder ein Paket wählen.")))
             }
         }
         .sheet(isPresented: $kern.hinzufuegenOffen) {
@@ -75,8 +77,23 @@ struct SendungsListe: View {
     @State private var neuerName = ""
 
     var body: some View {
-        let g = kern.gruppen
+        let bereich = kern.einstellungen.bereich
+        let mitPaketen = bereich != "briefe", mitBriefen = bereich != "pakete"
+        let g = mitPaketen ? kern.gruppen : Gruppen()
+        let b = mitBriefen ? kern.briefGruppen : BriefGruppen()
+        let leer = g.aktiv.isEmpty && g.zugestellt.isEmpty && b.offen.isEmpty && b.angekommen.isEmpty
         List(selection: $kern.auswahl) {
+            if kern.einstellungen.eingerichtet {
+                Picker(T("Zeigen"), selection: $kern.einstellungen.bereich) {
+                    Text(T("Alles")).tag("alle")
+                    Text(kern.briefGruppen.offen.isEmpty ? T("Briefe") : T("Briefe (%1)", "\(kern.briefGruppen.offen.count)")).tag("briefe")
+                    Text(kern.gruppen.aktiv.isEmpty ? T("Pakete") : T("Pakete (%1)", "\(kern.gruppen.aktiv.count)")).tag("pakete")
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+            }
             if !kern.bereit {
                 Section {
                     EinrichtenHinweis(kern: kern)
@@ -86,17 +103,24 @@ struct SendungsListe: View {
                     Label(kern.fehler, systemImage: "wifi.exclamationmark").foregroundStyle(.red)
                 }
             }
-            if !g.heute.isEmpty {
-                Section(T("Heute")) { ForEach(g.heute) { zeile($0) } }
+            if !g.heute.isEmpty || !b.heute.isEmpty {
+                Section(T("Heute")) {
+                    ForEach(b.heute) { briefZeile($0) }
+                    ForEach(g.heute) { zeile($0) }
+                }
             }
-            if !g.unterwegs.isEmpty {
-                Section(T("Unterwegs")) { ForEach(g.unterwegs) { zeile($0) } }
+            if !g.unterwegs.isEmpty || !b.unterwegs.isEmpty {
+                Section(T("Unterwegs")) {
+                    ForEach(b.unterwegs) { briefZeile($0) }
+                    ForEach(g.unterwegs) { zeile($0) }
+                }
             }
-            if !g.zugestellt.isEmpty {
+            if !g.zugestellt.isEmpty || !b.angekommen.isEmpty {
                 Section(isExpanded: $zugestelltOffen) {
+                    ForEach(b.angekommen.prefix(10)) { briefZeile($0) }
                     ForEach(g.zugestellt) { zeile($0) }
                 } header: {
-                    Text(T("Zugestellt"))
+                    Text(T("Angekommen"))
                 }
             }
         }
@@ -106,12 +130,13 @@ struct SendungsListe: View {
         .listStyle(.sidebar)
         #endif
         .overlay {
-            if kern.bereit && (kern.daten != nil || !kern.einstellungen.eingerichtet) && g.aktiv.isEmpty && g.zugestellt.isEmpty {
+            if kern.bereit && (kern.daten != nil || !kern.einstellungen.eingerichtet) && leer {
                 ContentUnavailableView {
-                    Label(T("Keine Pakete unterwegs"), systemImage: "shippingbox")
+                    Label(bereich == "briefe" ? T("Keine Briefe angekündigt") : bereich == "pakete" ? T("Keine Pakete unterwegs") : T("Keine Post unterwegs"),
+                          systemImage: bereich == "briefe" ? "envelope" : "shippingbox")
                 } description: {
                     Text(kern.einstellungen.eingerichtet ? T("Versandmails von DHL, Hermes, DPD, GLS, UPS und Amazon erscheinen hier – oder eine Sendung mit ＋ hinzufügen.")
-                         : T("Sendungsnummer mit ＋ eintragen oder den Paketschein scannen – Paketbote holt Stand, Verlauf und Karte."))
+                         : T("Sendungsnummer mit ＋ eintragen oder den Paketschein scannen – Post & Pakete holt Stand, Verlauf und Karte."))
                 } actions: {
                     Button(T("Sendung hinzufügen")) { kern.hinzufuegenOffen = true }.buttonStyle(.borderedProminent)
                 }
@@ -157,6 +182,22 @@ struct SendungsListe: View {
         }
     }
 
+    private func briefZeile(_ b: Brief) -> some View {
+        BriefZeile(kern: kern, brief: b, mitKonto: kern.mehrereKonten)
+            .tag(b.id)
+            .contextMenu {
+                Button { Task { await kern.briefErledigt(b, !b.erledigt) } } label: {
+                    b.erledigt ? Label(T("Doch nicht angekommen"), systemImage: "arrow.uturn.backward") : Label(T("Angekommen"), systemImage: "checkmark")
+                }
+                Button { Task { await kern.erinnern(titel: T("Brief von %1", b.titel), notiz: "", in: 1) } } label: { Label(T("Morgen erinnern"), systemImage: "bell") }
+            }
+            .swipeActions(edge: .trailing) {
+                Button { Task { await kern.briefErledigt(b, !b.erledigt) } } label: {
+                    b.erledigt ? Label(T("Doch nicht"), systemImage: "arrow.uturn.backward") : Label(T("Angekommen"), systemImage: "checkmark")
+                }.tint(.green)
+            }
+    }
+
     private func zeile(_ s: Sendung) -> some View {
         SendungsZeile(sendung: s, mitKonto: kern.mehrereKonten)
             .tag(s.id)
@@ -189,6 +230,68 @@ struct SendungsListe: View {
         if s.manuell {
             Button(role: .destructive) { Task { await kern.entfernen(s) } } label: { Label(T("Entfernen"), systemImage: "trash") }
         }
+    }
+}
+
+/// Ein Brief: Umschlag (Bild von der Post), Absender, angekündigt wann
+struct BriefZeile: View {
+    let kern: Kern
+    let brief: Brief
+    var mitKonto = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Umschlag(kern: kern, brief: brief)
+                .frame(width: 64, height: 44)
+                .opacity(brief.erledigt ? 0.6 : 1)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 5) {
+                    if brief.wichtig && !brief.erledigt { Etikett(text: T("Wichtig"), farbe: .red) }
+                    Text(brief.titel).font(.body.weight(.semibold)).lineLimit(1)
+                }
+                Text(Texte.brief(brief, mitKonto: mitKonto))
+                    .font(.subheadline)
+                    .foregroundStyle(brief.heute() && !brief.erledigt ? Color.accentColor : .secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Umschlag: das Bild der Post (aus Home Assistant, zwischengespeichert) – sonst ein gezeichneter Umschlag
+struct Umschlag: View {
+    let kern: Kern
+    let brief: Brief
+    var gross = false
+    @State private var bild: Image?
+
+    var body: some View {
+        let form = RoundedRectangle(cornerRadius: gross ? 14 : 7, style: .continuous)
+        ZStack {
+            Color(red: 0.98, green: 0.97, blue: 0.94)
+            if let bild {
+                bild.resizable().interpolation(.high).aspectRatio(contentMode: .fit).padding(gross ? 6 : 2)
+            } else {
+                Image(systemName: brief.wichtig ? "envelope.badge.fill" : "envelope.fill")
+                    .resizable().aspectRatio(contentMode: .fit)
+                    .padding(gross ? 40 : 10)
+                    .foregroundStyle(brief.wichtig ? AnyShapeStyle(Color.red) : AnyShapeStyle(Color.black.opacity(0.35)))
+            }
+        }
+        .clipShape(form)
+        .overlay(form.strokeBorder(brief.wichtig && !brief.erledigt ? Color.red.opacity(0.8) : Color.primary.opacity(0.12), lineWidth: brief.wichtig ? 1.5 : 0.5))
+        .task(id: brief.id) {
+            guard brief.bild, let d = await Umschlaege.laden(brief.id, ha: kern.ha) else { return }
+            #if canImport(UIKit)
+            bild = UIImage(data: d).map { Image(uiImage: $0) }
+            #else
+            bild = NSImage(data: d).map { Image(nsImage: $0) }
+            #endif
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -225,8 +328,8 @@ struct EinrichtenHinweis: View {
     let kern: Kern
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(T("Willkommen bei Paketbote"), systemImage: "shippingbox.fill").font(.headline)
-            Text(T("Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen auch die Pakete aus deinen Versandmails dazu."))
+            Label(T("Willkommen bei Post & Pakete"), systemImage: "envelope.fill").font(.headline)
+            Text(T("Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen die angekündigten Briefe und die Pakete aus deinen Versandmails dazu."))
                 .font(.callout).foregroundStyle(.secondary)
             HStack {
                 Button(T("Sendung hinzufügen")) { kern.einstellungen.direktModus = true; kern.hinzufuegenOffen = true }.buttonStyle(.borderedProminent)

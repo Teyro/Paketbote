@@ -124,7 +124,7 @@ public struct Verfolgung: Sendable {
 // MARK: - Hilfen
 
 enum Netz {
-    static let agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Paketbote/1.2"
+    static let agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) PostUndPakete/2.0"
 
     static func json(_ url: URL, methode: String = "GET", kopf: [String: String] = [:], koerper: Data? = nil) async throws -> JSON {
         var r = URLRequest(url: url)
@@ -281,7 +281,7 @@ public struct UPSAnbieter: Anbieter {
         guard let token = t["access_token"]?.text else { throw AnbieterFehler.abgelehnt }
         let n = nummer.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? nummer
         let j = try await Netz.json(URL(string: "https://onlinetools.ups.com/api/track/v1/details/\(n)?locale=\(Sprache.code == "de" ? "de_DE" : "en_US")")!,
-                                    kopf: ["Authorization": "Bearer " + token, "transId": UUID().uuidString, "transactionSrc": "Paketbote"])
+                                    kopf: ["Authorization": "Bearer " + token, "transId": UUID().uuidString, "transactionSrc": "PostUndPakete"])
         guard let p = j["trackResponse"]?["shipment"]?[0]?["package"]?[0] else { throw AnbieterFehler.unbekannt }
         return Self.lesen(p)
     }

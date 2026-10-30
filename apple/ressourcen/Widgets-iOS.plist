@@ -4,10 +4,10 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key><string>de</string>
 	<key>CFBundleLocalizations</key><array><string>de</string><string>en</string></array>
-	<key>CFBundleDisplayName</key><string>Paketbote</string>
+	<key>CFBundleDisplayName</key><string>Post &amp; Pakete</string>
 	<key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleName</key><string>Paketbote Widgets</string>
+	<key>CFBundleName</key><string>Post &amp; Pakete Widgets</string>
 	<key>CFBundlePackageType</key><string>XPC!</string>
 	<key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>

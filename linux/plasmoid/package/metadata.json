@@ -2,14 +2,14 @@
     "KPlugin": {
         "Authors": [{ "Name": "Teyro" }],
         "Category": "Online Services",
-        "Description": "Sendungen von DHL, Hermes, DPD, GLS, UPS und Amazon über Home Assistant",
-        "Description[en]": "Shipments from DHL, Hermes, DPD, GLS, UPS and Amazon via Home Assistant",
-        "Icon": "package-x-generic",
+        "Description": "Angekündigte Briefe und Pakete von DHL, Hermes, DPD, GLS, UPS und Amazon – über Home Assistant oder direkt",
+        "Description[en]": "Announced letters and parcels from DHL, Hermes, DPD, GLS, UPS and Amazon – via Home Assistant or directly",
+        "Icon": "mail-folder-inbox",
         "Id": "de.teyro.paketbote",
         "License": "GPL-3.0-or-later",
-        "Name": "Paketbote",
-        "Version": "1.2.0",
-        "Website": "https://github.com/Teyro/Paketbote"
+        "Name": "Post & Pakete",
+        "Version": "2.0.0",
+        "Website": "https://github.com/Teyro/Post-und-Pakete"
     },
     "KPackageStructure": "Plasma/Applet",
     "X-Plasma-API-Minimum-Version": "6.0"

@@ -14,7 +14,7 @@ import "../gemeinsam/sprache.js" as S
 Kirigami.ApplicationWindow {
     id: fenster
 
-    title: S.t("Paketbote")
+    title: S.t("Post & Pakete")
     width: Kirigami.Units.gridUnit * 50
     height: Kirigami.Units.gridUnit * 36
     minimumWidth: Kirigami.Units.gridUnit * 20
@@ -40,6 +40,8 @@ Kirigami.ApplicationWindow {
         // abgeschaltete Anbieter (JSON-Liste von Namen)
         property string aus: "[]"
         property bool auchInHA: true
+        /// Liste: "alle" | "briefe" | "pakete"
+        property string bereich: "alle"
     }
 
     property double jetzt: Date.now()
@@ -67,18 +69,23 @@ Kirigami.ApplicationWindow {
     Loader { id: mitteilung; source: "../gemeinsam/Mitteilung.qml" }
 
     readonly property var gruppen: Logik.gruppen(verbindung.sendungen, jetzt, speicher.tageZugestellt)
+    readonly property var briefGruppen: Logik.briefGruppen(verbindung.briefe, jetzt)
     property string auswahl: ""
     readonly property var gewaehlt: verbindung.sendungen.find(function (s) { return s.id === fenster.auswahl; }) || null
+    readonly property var gewaehlterBrief: verbindung.brief(fenster.auswahl)
 
     function zeigen(id) {
         auswahl = id;
         while (pageStack.depth > 1) pageStack.pop();
-        pageStack.push(detailSeite);
+        pageStack.push(verbindung.brief(id) ? briefSeite : detailSeite);
     }
 
     pageStack.initialPage: ListenSeite {
         ha: verbindung
         gruppen: fenster.gruppen
+        briefGruppen: fenster.briefGruppen
+        bereich: speicher.bereich
+        onBereichGewaehlt: (b) => speicher.bereich = b
         jetzt: fenster.jetzt
         auswahl: fenster.auswahl
         onGewaehlt: (id) => fenster.zeigen(id)
@@ -91,6 +98,15 @@ Kirigami.ApplicationWindow {
         DetailSeite {
             ha: verbindung
             sendung: fenster.gewaehlt
+            jetzt: fenster.jetzt
+        }
+    }
+
+    Component {
+        id: briefSeite
+        BriefSeite {
+            ha: verbindung
+            brief: fenster.gewaehlterBrief
             jetzt: fenster.jetzt
         }
     }

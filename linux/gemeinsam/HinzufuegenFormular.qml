@@ -96,7 +96,7 @@ ColumnLayout {
         text: formular.gewaehlt && Anbieter.namen(formular.ha.schluessel, formular.gewaehlt).length
               ? S.t("Abfrage über %1.", Anbieter.namen(formular.ha.schluessel, formular.gewaehlt).join(" → "))
               : formular.gewaehlt ? S.t("Für %1 ist noch kein Anbieter eingerichtet (Einstellungen → Direkt verfolgen).", Logik.dienst(formular.gewaehlt).name)
-              : S.t("Paketbote fragt selbst bei den Anbietern nach – auch ohne Home Assistant.")
+              : S.t("Post & Pakete fragt selbst bei den Anbietern nach – auch ohne Home Assistant.")
         font: Kirigami.Theme.smallFont
         color: Kirigami.Theme.disabledTextColor
         wrapMode: Text.Wrap

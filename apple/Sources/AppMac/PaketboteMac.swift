@@ -10,7 +10,7 @@ struct PaketboteMac: App {
     @State private var aktualisierer = Aktualisierer.shared
 
     var body: some Scene {
-        Window(T("Paketbote"), id: "haupt") {
+        Window(T("Post & Pakete"), id: "haupt") {
             Group {
                 if kern.vorschau { Vorschau(kern: kern) } else { Hauptansicht(kern: kern) }
             }
@@ -43,8 +43,8 @@ struct PaketboteMac: App {
         MenuBarExtra {
             MenueListe(kern: kern)
         } label: {
-            let g = kern.gruppen
-            Label(g.heute.isEmpty ? "" : "\(g.heute.count)", systemImage: g.heute.isEmpty ? "shippingbox" : "shippingbox.fill")
+            let n = kern.gruppen.heute.count + kern.briefGruppen.heute.count
+            Label(n == 0 ? "" : "\(n)", systemImage: n == 0 ? "tray" : "tray.full.fill")
                 .labelStyle(.titleAndIcon)
         }
         .menuBarExtraStyle(.window)
@@ -57,23 +57,28 @@ struct MenueListe: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        let g = kern.gruppen
+        let g = kern.gruppen, b = kern.briefGruppen
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(Texte.titel(g.aktiv)).font(.headline)
+                Text(WidgetDaten(uebersicht: kern.daten.map { var u = $0; u.sendungen = kern.alle; return u } ?? Uebersicht(sendungen: kern.alle),
+                                 eingerichtet: true).titel).font(.headline)
                 Spacer()
                 Button { Task { await kern.laden() } } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.borderless)
             }
             if !kern.fehler.isEmpty { Text(kern.fehler).font(.caption).foregroundStyle(.red) }
             Text(T("Nummer hierher ziehen oder ⌥⌘P drücken")).font(.caption2).foregroundStyle(.tertiary)
+            ForEach(b.offen.prefix(4)) { br in
+                Button { zeigen(br.id) } label: { BriefZeile(kern: kern, brief: br, mitKonto: kern.mehrereKonten).contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+            }
             ForEach(g.aktiv.prefix(8)) { s in
                 Button { zeigen(s.id) } label: { SendungsZeile(sendung: s, mitKonto: kern.mehrereKonten).contentShape(Rectangle()) }
                     .buttonStyle(.plain)
             }
-            if g.aktiv.isEmpty { Text(T("Keine Pakete unterwegs")).foregroundStyle(.secondary) }
+            if g.aktiv.isEmpty && b.offen.isEmpty { Text(T("Keine Post unterwegs")).foregroundStyle(.secondary) }
             Divider()
             HStack {
-                Button(T("Alle Pakete …")) { zeigen(nil) }
+                Button(T("Alle anzeigen …")) { zeigen(nil) }
                 Spacer()
                 Button(T("Hinzufügen …")) { kern.hinzufuegenOffen = true; zeigen(nil) }
                 Button(T("Beenden")) { NSApp.terminate(nil) }

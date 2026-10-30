@@ -5,6 +5,8 @@
   <group name="General">
     <!-- Adresse und Token liegen in ~/.config/paketbote.conf (gemeinsam mit der Paketbote-App) -->
     <entry name="mitteilungen" type="Bool"><default>true</default></entry>
+    <!-- Was die Kachel zeigt: alle | briefe | pakete (z. B. zwei Kacheln nebeneinander) -->
+    <entry name="inhalt" type="String"><default>alle</default></entry>
     <entry name="updatesSuchen" type="Bool"><default>true</default></entry>
   </group>
 </kcfg>

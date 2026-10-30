@@ -4,6 +4,7 @@ import SwiftUI
 import UserNotifications
 import WidgetKit
 import Security
+import EventKit
 import PaketKern
 
 /// Zustand der App: Zugang, Sendungen (aus Home Assistant und direkt verfolgt), Aktionen. Gemeinsam für iPhone und Mac.
@@ -40,6 +41,10 @@ final class Kern {
     /// Alle Sendungen: aus Home Assistant und direkt verfolgt (gleiche Nummer nur einmal)
     var alle: [Sendung] { zusammenfuehren(ha: daten?.sendungen ?? [], direkt: direkt.sendungen) }
     var gruppen: Gruppen { Gruppen(alle, tage: einstellungen.tageZugestellt) }
+    /// Angekündigte Briefe (nur mit Home Assistant)
+    var briefe: [Brief] { daten?.briefe ?? [] }
+    var briefGruppen: BriefGruppen { BriefGruppen(briefe) }
+    func brief(_ id: String?) -> Brief? { briefe.first { $0.id == id } }
     var mehrereKonten: Bool { daten?.mehrereKonten ?? false }
     /// Ist überhaupt etwas eingerichtet (Home Assistant oder direkt verfolgen)?
     var bereit: Bool { einstellungen.eingerichtet || !direkt.sendungen.isEmpty || einstellungen.direktModus }
@@ -74,6 +79,8 @@ final class Kern {
         if !still { laedt = true }
         defer { laedt = false }
         let vorher = alle
+        let vorherBriefe = Set(briefe.map(\.id))
+        let ersterAbruf = daten == nil
         if einstellungen.eingerichtet {
             do {
                 daten = try await ha.laden()
@@ -101,6 +108,8 @@ final class Kern {
             liste.speichern()
         }
         if einstellungen.mitteilungen && !vorher.isEmpty { await melden(alt: vorher, neu: alle) }
+        if einstellungen.mitteilungen && !ersterAbruf { await briefeMelden(neu: briefGruppen.heute.filter { !vorherBriefe.contains($0.id) }) }
+        Umschlaege.aufraeumen(behalten: Set(briefe.map(\.id)))
         widgetsSchreiben()
         nachLaden(self)
     }
@@ -252,6 +261,53 @@ final class Kern {
         _ = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
     }
 
+    /// Neue Briefe von heute (eine Mitteilung; wichtige zuerst)
+    private func briefeMelden(neu: [Brief]) async {
+        guard !neu.isEmpty else { return }
+        let inhalt = UNMutableNotificationContent()
+        let wichtig = neu.contains(where: \.wichtig)
+        inhalt.title = (wichtig ? "⚠️ " : "✉️ ") + (neu.count == 1 ? T("Brief angekündigt") : T("%1 angekündigt", Texte.briefe(neu.count)))
+        inhalt.body = neu.map { ($0.wichtig ? "⚠️ " : "") + $0.titel }.joined(separator: ", ")
+        inhalt.threadIdentifier = "briefe"
+        inhalt.userInfo = ["sendung": neu[0].id]
+        inhalt.sound = .default
+        try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "briefe-" + neu.map(\.id).joined(), content: inhalt, trigger: nil))
+    }
+
+    /// Brief als angekommen markieren (gilt über Home Assistant auf allen Geräten)
+    func briefErledigt(_ b: Brief, _ ja: Bool) async {
+        if var d = daten, let i = d.briefe.firstIndex(where: { $0.id == b.id }) {
+            d.briefe[i].erledigt = ja
+            daten = d
+        }
+        let ha = ha
+        _ = await aktion { try await ha.erledigt(b.id, ja) }
+    }
+
+    /// Erinnerung in der Erinnerungen-App (z. B. „Brief vom Finanzamt beantworten“)
+    func erinnern(titel: String, notiz: String, in tage: Int) async {
+        let ek = EKEventStore()
+        do {
+            guard try await ek.requestFullAccessToReminders() else {
+                meldung = T("Kein Zugriff auf die Erinnerungen – in den Systemeinstellungen erlauben.")
+                return
+            }
+            let r = EKReminder(eventStore: ek)
+            r.title = titel
+            r.notes = notiz
+            r.calendar = ek.defaultCalendarForNewReminders()
+            let tag = Calendar.current.date(byAdding: .day, value: tage, to: Date()) ?? Date()
+            var k = Calendar.current.dateComponents([.year, .month, .day], from: tag)
+            k.hour = tage == 0 ? 18 : 9
+            r.dueDateComponents = k
+            r.addAlarm(EKAlarm(absoluteDate: Calendar.current.date(from: k) ?? tag))
+            try ek.save(r, commit: true)
+            meldung = T("Erinnerung angelegt")
+        } catch {
+            meldung = T("Erinnerung nicht möglich: %1", error.localizedDescription)
+        }
+    }
+
     private func melden(alt: [Sendung], neu: [Sendung]) async {
         let vorher = Dictionary(alt.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         for s in neu {
@@ -284,6 +340,8 @@ final class Einstellungen {
     var direktModus: Bool { didSet { d.set(direktModus, forKey: "direktModus") } }
     /// Live-Aktivität für Pakete, die heute kommen (iPhone)
     var liveAktivitaet: Bool { didSet { d.set(liveAktivitaet, forKey: "liveAktivitaet") } }
+    /// Was die Liste zeigt: "alle" | "briefe" | "pakete"
+    var bereich: String { didSet { d.set(bereich, forKey: "bereich") } }
     var token: String {
         didSet {
             guard !vorschau else { return }
@@ -308,6 +366,7 @@ final class Einstellungen {
         auchInHA = d.bool(forKey: "auchInHA")
         direktModus = d.bool(forKey: "direktModus")
         liveAktivitaet = d.bool(forKey: "liveAktivitaet")
+        bereich = d.string(forKey: "bereich") ?? "alle"
         // bis 1.0 lag der Token auf dem iPhone in den Einstellungen
         let alt = d.string(forKey: "token") ?? ""
         token = vorschau ? "" : Schluesselbund.lesen(konto: "token") ?? alt
@@ -341,7 +400,7 @@ enum Schluesselbund {
         if SecItemUpdate(basis(konto) as CFDictionary, [kSecValueData as String: daten] as CFDictionary) == errSecItemNotFound {
             var neu = basis(konto)
             neu[kSecValueData as String] = daten
-            neu[kSecAttrLabel as String] = "Paketbote – " + konto
+            neu[kSecAttrLabel as String] = "Post & Pakete – " + konto
             #if os(iOS)
             neu[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
             #endif

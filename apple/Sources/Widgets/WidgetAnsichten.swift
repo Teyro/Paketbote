@@ -4,37 +4,65 @@ import PaketKern
 
 // Ansichten der Widgets – auch in der App für die Vorschau-Bilder benutzt.
 
+/// Ein Eintrag im Widget: Brief oder Paket
+enum Posten: Identifiable {
+    case brief(Brief)
+    case paket(Sendung)
+
+    var id: String {
+        switch self {
+        case .brief(let b): b.id
+        case .paket(let s): s.id
+        }
+    }
+    var link: URL { URL(string: "paketbote://sendung/\(id)")! }
+}
+
 /// Was ein Widget zeigt
 struct WidgetDaten {
     var uebersicht: Uebersicht?
     var eingerichtet: Bool
     var jetzt = Date()
+    /// "alle" | "briefe" | "pakete"
+    var inhalt = "alle"
 
-    var gruppen: Gruppen { Gruppen(uebersicht?.sendungen ?? [], jetzt: jetzt) }
+    var gruppen: Gruppen { inhalt == "briefe" ? Gruppen() : Gruppen(uebersicht?.sendungen ?? [], jetzt: jetzt) }
+    var briefe: BriefGruppen { inhalt == "pakete" ? BriefGruppen() : BriefGruppen(uebersicht?.briefe ?? [], jetzt: jetzt) }
     var aktiv: [Sendung] { gruppen.aktiv }
+    /// Heute: Briefe zuerst (wichtige vorn), dann Pakete
+    var heute: [Posten] { briefe.heute.map(Posten.brief) + gruppen.heute.map(Posten.paket) }
+    var unterwegs: [Posten] { briefe.unterwegs.map(Posten.brief) + gruppen.unterwegs.map(Posten.paket) }
+    var alle: [Posten] { heute + unterwegs }
+
+    /// „2 Briefe, 3 Pakete unterwegs“
+    var titel: String {
+        let b = briefe.offen.count, p = gruppen.aktiv.count
+        if b == 0 && p == 0 { return inhalt == "briefe" ? T("Keine Briefe angekündigt") : inhalt == "pakete" ? T("Keine Pakete unterwegs") : T("Keine Post unterwegs") }
+        return T("%1 unterwegs", [b > 0 ? Texte.briefe(b) : "", p > 0 ? Texte.anzahl(p) : ""].filter { !$0.isEmpty }.joined(separator: ", "))
+    }
+    var symbol: String { inhalt == "briefe" ? "envelope.fill" : inhalt == "pakete" ? "shippingbox.fill" : "tray.full.fill" }
 
     static var leer: WidgetDaten { WidgetDaten(uebersicht: nil, eingerichtet: false) }
 }
 
 func sendungsLink(_ s: Sendung) -> URL { URL(string: "paketbote://sendung/\(s.id)")! }
 
-/// Kopf: Symbol, „3 Pakete unterwegs“, rechts „2 heute“
+/// Kopf: Symbol, „2 Briefe, 3 Pakete unterwegs“, rechts „2 heute“
 struct WidgetKopf: View {
     let daten: WidgetDaten
     var kompakt = false
     var body: some View {
-        let g = daten.gruppen
         HStack(spacing: 5) {
-            Image(systemName: "shippingbox.fill")
+            Image(systemName: daten.symbol)
                 .foregroundStyle(Color.accentColor)
                 .font(.system(size: kompakt ? 12 : 14, weight: .semibold))
-            Text(kompakt ? (g.aktiv.isEmpty ? T("Pakete") : T("%1 unterwegs", "\(g.aktiv.count)")) : Texte.titel(g.aktiv))
+            Text(kompakt ? (daten.alle.isEmpty ? T("Post & Pakete") : T("%1 unterwegs", "\(daten.alle.count)")) : daten.titel)
                 .font(.system(size: kompakt ? 12 : 13, weight: .semibold))
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.75)
             Spacer(minLength: 2)
-            if !g.heute.isEmpty {
-                Text(T("%1 heute", "\(g.heute.count)"))
+            if !daten.heute.isEmpty {
+                Text(T("%1 heute", "\(daten.heute.count)"))
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6).padding(.vertical, 1.5)
@@ -51,10 +79,10 @@ struct WidgetLeer: View {
     var body: some View {
         VStack(spacing: 6) {
             Spacer(minLength: 0)
-            Image(systemName: !daten.eingerichtet ? "gearshape" : "shippingbox")
+            Image(systemName: !daten.eingerichtet ? "gearshape" : daten.inhalt == "briefe" ? "envelope" : "shippingbox")
                 .font(.system(size: 24, weight: .light))
                 .foregroundStyle(.secondary)
-            Text(!daten.eingerichtet ? (Ablage.gruppeDa ? T("App öffnen und einrichten") : T("Widget lange drücken → „Widget bearbeiten“ → Home Assistant eintragen")) : T("Keine Pakete unterwegs"))
+            Text(!daten.eingerichtet ? (Ablage.gruppeDa ? T("App öffnen und einrichten") : T("Widget lange drücken → „Widget bearbeiten“ → Home Assistant eintragen")) : daten.titel)
                 .font(.system(size: 12, weight: .medium))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
@@ -67,60 +95,101 @@ struct WidgetLeer: View {
     }
 }
 
+/// Briefsymbol im Widget (das Umschlagbild laden Widgets nicht – zu groß für die Zeitleiste)
+struct BriefSymbol: View {
+    let brief: Brief
+    var groesse: CGFloat = 30
+    var body: some View {
+        RoundedRectangle(cornerRadius: groesse * 0.26, style: .continuous)
+            .fill(Color(red: 0.98, green: 0.97, blue: 0.94))
+            .frame(width: groesse, height: groesse)
+            .overlay {
+                Image(systemName: brief.wichtig ? "envelope.badge.fill" : "envelope.fill")
+                    .font(.system(size: groesse * 0.46, weight: .semibold))
+                    .foregroundStyle(brief.wichtig ? AnyShapeStyle(Color.red) : AnyShapeStyle(Color(red: 0.25, green: 0.24, blue: 0.2)))
+            }
+            .overlay(RoundedRectangle(cornerRadius: groesse * 0.26, style: .continuous).strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5))
+    }
+}
+
 /// Eine Zeile im Widget
 struct WidgetZeile: View {
-    let sendung: Sendung
+    let posten: Posten
     var logo: CGFloat = 30
     var jetzt = Date()
     var body: some View {
         HStack(spacing: 9) {
-            DienstLogo(dienst: sendung.dienst, groesse: logo)
+            switch posten {
+            case .paket(let s): DienstLogo(dienst: s.dienst, groesse: logo)
+            case .brief(let b): BriefSymbol(brief: b, groesse: logo)
+            }
             VStack(alignment: .leading, spacing: 1) {
-                Text(sendung.titel).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary).lineLimit(1)
-                Text(Texte.zeile(sendung, jetzt: jetzt))
-                    .font(.system(size: 11))
-                    .foregroundStyle(standFarbe(sendung))
-                    .lineLimit(1)
+                Text(titel).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary).lineLimit(1)
+                Text(zeile).font(.system(size: 11)).foregroundStyle(farbe).lineLimit(1)
             }
             Spacer(minLength: 0)
         }
     }
+
+    private var titel: String {
+        switch posten {
+        case .paket(let s): s.titel
+        case .brief(let b): b.titel
+        }
+    }
+    private var zeile: String {
+        switch posten {
+        case .paket(let s): Texte.zeile(s, jetzt: jetzt)
+        case .brief(let b): (b.wichtig ? T("Wichtig") + " · " : "") + Texte.brief(b, jetzt: jetzt)
+        }
+    }
+    private var farbe: Color {
+        switch posten {
+        case .paket(let s): standFarbe(s)
+        case .brief(let b): b.wichtig ? .red : b.heute(jetzt: jetzt) ? .accentColor : .secondary
+        }
+    }
 }
 
-/// Klein: das nächste Paket
+/// Klein: das Wichtigste
 struct KleinesWidget: View {
     let daten: WidgetDaten
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             WidgetKopf(daten: daten, kompakt: true)
-            if let s = daten.aktiv.first {
+            if let p = daten.alle.first {
                 Spacer(minLength: 0)
-                DienstLogo(dienst: s.dienst, groesse: 42)
-                Text(s.titel).font(.system(size: 14, weight: .bold)).lineLimit(2).minimumScaleFactor(0.8)
-                Text(Texte.stand(s, jetzt: daten.jetzt))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(standFarbe(s))
-                    .lineLimit(2)
-                Fortschritt(sendung: s, hoehe: 4)
+                switch p {
+                case .paket(let s):
+                    DienstLogo(dienst: s.dienst, groesse: 42)
+                    Text(s.titel).font(.system(size: 14, weight: .bold)).lineLimit(2).minimumScaleFactor(0.8)
+                    Text(Texte.stand(s, jetzt: daten.jetzt)).font(.system(size: 11, weight: .medium)).foregroundStyle(standFarbe(s)).lineLimit(2)
+                    Fortschritt(sendung: s, hoehe: 4)
+                case .brief(let b):
+                    BriefSymbol(brief: b, groesse: 42)
+                    Text(b.titel).font(.system(size: 14, weight: .bold)).lineLimit(2).minimumScaleFactor(0.8)
+                    Text(Texte.brief(b, jetzt: daten.jetzt)).font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(b.wichtig ? Color.red : Color.accentColor).lineLimit(2)
+                }
             } else {
                 WidgetLeer(daten: daten)
             }
         }
-        .widgetURL(daten.aktiv.first.map(sendungsLink))
+        .widgetURL(daten.alle.first?.link)
     }
 }
 
-/// Mittel: bis zu drei Pakete
+/// Mittel: bis zu drei Einträge
 struct MittleresWidget: View {
     let daten: WidgetDaten
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             WidgetKopf(daten: daten)
-            if daten.aktiv.isEmpty {
+            if daten.alle.isEmpty {
                 WidgetLeer(daten: daten)
             } else {
-                ForEach(daten.aktiv.prefix(3)) { s in
-                    Link(destination: sendungsLink(s)) { WidgetZeile(sendung: s, jetzt: daten.jetzt) }
+                ForEach(daten.alle.prefix(3)) { p in
+                    Link(destination: p.link) { WidgetZeile(posten: p, jetzt: daten.jetzt) }
                 }
                 Spacer(minLength: 0)
             }
@@ -128,28 +197,27 @@ struct MittleresWidget: View {
     }
 }
 
-/// Groß: Heute und Unterwegs, bis zu sieben Pakete
+/// Groß: Heute und Unterwegs, bis zu sieben Einträge
 struct GrossesWidget: View {
     let daten: WidgetDaten
     var body: some View {
-        let g = daten.gruppen
         VStack(alignment: .leading, spacing: 8) {
             WidgetKopf(daten: daten)
-            if g.aktiv.isEmpty {
+            if daten.alle.isEmpty {
                 WidgetLeer(daten: daten)
             } else {
-                let heute = Array(g.heute.prefix(7)), spaeter = Array(g.unterwegs.prefix(max(0, 7 - heute.count)))
+                let heute = Array(daten.heute.prefix(7)), spaeter = Array(daten.unterwegs.prefix(max(0, 7 - heute.count)))
                 if !heute.isEmpty {
                     ueberschrift(T("Heute"))
-                    ForEach(heute) { s in Link(destination: sendungsLink(s)) { WidgetZeile(sendung: s, logo: 34, jetzt: daten.jetzt) } }
+                    ForEach(heute) { p in Link(destination: p.link) { WidgetZeile(posten: p, logo: 34, jetzt: daten.jetzt) } }
                 }
                 if !spaeter.isEmpty {
                     ueberschrift(T("Unterwegs"))
-                    ForEach(spaeter) { s in Link(destination: sendungsLink(s)) { WidgetZeile(sendung: s, logo: 34, jetzt: daten.jetzt) } }
+                    ForEach(spaeter) { p in Link(destination: p.link) { WidgetZeile(posten: p, logo: 34, jetzt: daten.jetzt) } }
                 }
                 Spacer(minLength: 0)
-                if g.aktiv.count > 7 {
-                    Text(T("+ %1 weitere", "\(g.aktiv.count - 7)")).font(.system(size: 10)).foregroundStyle(.tertiary)
+                if daten.alle.count > 7 {
+                    Text(T("+ %1 weitere", "\(daten.alle.count - 7)")).font(.system(size: 10)).foregroundStyle(.tertiary)
                 }
             }
         }
@@ -161,19 +229,25 @@ struct GrossesWidget: View {
 }
 
 #if os(iOS)
-/// Sperrbildschirm: nächstes Paket
+/// Sperrbildschirm: das Nächste
 struct RechteckWidget: View {
     let daten: WidgetDaten
     var body: some View {
-        if let s = daten.aktiv.first {
+        if let p = daten.alle.first {
             VStack(alignment: .leading, spacing: 1) {
-                Label(s.titel, systemImage: "shippingbox.fill").font(.headline).lineLimit(1)
-                Text(Texte.stand(s, jetzt: daten.jetzt)).font(.caption).lineLimit(1)
-                if daten.aktiv.count > 1 { Text(T("+ %1 weitere", "\(daten.aktiv.count - 1)")).font(.caption2).foregroundStyle(.secondary) }
+                switch p {
+                case .paket(let s):
+                    Label(s.titel, systemImage: "shippingbox.fill").font(.headline).lineLimit(1)
+                    Text(Texte.stand(s, jetzt: daten.jetzt)).font(.caption).lineLimit(1)
+                case .brief(let b):
+                    Label(b.titel, systemImage: b.wichtig ? "envelope.badge.fill" : "envelope.fill").font(.headline).lineLimit(1)
+                    Text(Texte.brief(b, jetzt: daten.jetzt)).font(.caption).lineLimit(1)
+                }
+                if daten.alle.count > 1 { Text(T("+ %1 weitere", "\(daten.alle.count - 1)")).font(.caption2).foregroundStyle(.secondary) }
             }
-            .widgetURL(sendungsLink(s))
+            .widgetURL(p.link)
         } else {
-            Label(daten.eingerichtet ? T("Keine Pakete unterwegs") : T("Paketbote einrichten"), systemImage: "shippingbox")
+            Label(daten.eingerichtet ? daten.titel : T("Post & Pakete einrichten"), systemImage: daten.symbol)
                 .font(.caption)
         }
     }
@@ -183,22 +257,20 @@ struct RechteckWidget: View {
 struct RundWidget: View {
     let daten: WidgetDaten
     var body: some View {
-        let g = daten.gruppen
-        Gauge(value: Double(g.heute.count), in: 0...Double(max(1, g.aktiv.count))) {
-            Image(systemName: "shippingbox.fill")
+        Gauge(value: Double(daten.heute.count), in: 0...Double(max(1, daten.alle.count))) {
+            Image(systemName: daten.symbol)
         } currentValueLabel: {
-            Text("\(g.aktiv.count)")
+            Text("\(daten.alle.count)")
         }
         .gaugeStyle(.accessoryCircular)
     }
 }
 
-/// Zeile über der Uhr: „2 Pakete heute“
+/// Zeile über der Uhr: „2 heute“ bzw. „3 Pakete unterwegs“
 struct ZeilenWidget: View {
     let daten: WidgetDaten
     var body: some View {
-        let g = daten.gruppen
-        Label(g.heute.isEmpty ? Texte.titel(g.aktiv) : T("%1 heute", Texte.anzahl(g.heute.count)), systemImage: "shippingbox.fill")
+        Label(daten.heute.isEmpty ? daten.titel : T("%1 heute", "\(daten.heute.count)"), systemImage: daten.symbol)
     }
 }
 #endif

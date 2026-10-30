@@ -2,7 +2,7 @@ import SwiftUI
 import PaketKern
 
 /// Testlauf für die Bildschirmfotos (GitHub Actions): `--vorschau` mit PB_ADRESSE, PB_TOKEN und
-/// PB_ANSICHT = liste | detail | hinzufuegen | einstellungen | widgets
+/// PB_ANSICHT = liste | detail | brief | statistik | hinzufuegen | einstellungen | widgets
 struct Vorschau: View {
     @Bindable var kern: Kern
     private let ansicht = ProcessInfo.processInfo.environment["PB_ANSICHT"] ?? "liste"
@@ -20,6 +20,8 @@ struct Vorschau: View {
             try? await Task.sleep(for: .seconds(1))
             switch ansicht {
             case "detail": kern.auswahl = kern.gruppen.heute.first?.id ?? kern.gruppen.aktiv.first?.id
+            case "brief": kern.auswahl = kern.briefGruppen.heute.first?.id
+            case "statistik": kern.statistikOffen = true
             case "hinzufuegen": kern.hinzufuegenOffen = true
             case "einstellungen": kern.einstellungenOffen = true
             default: break

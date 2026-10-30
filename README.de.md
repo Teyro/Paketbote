@@ -1,13 +1,13 @@
-# Paketbote
+# Post & Pakete
 
-**Paketverfolgung für iPhone, iPad, Apple Watch, Mac und Linux – DHL, Hermes, DPD, GLS, UPS und Amazon.**
-Wie die App *Parcel*, nur ohne fremden Server: Die Zentrale ist dein Home Assistant mit der Integration
+**Angekündigte Briefe und Pakete – auf iPhone, iPad, Apple Watch, Mac und Linux. DHL, Deutsche Post, Hermes, DPD, GLS, UPS und Amazon.**
+Eine App für die ganze Post – wie *Parcel*, nur ohne fremden Server und dazu mit den Briefen, die die Deutsche Post per Mail ankündigt (mit Bild des Umschlags): Die Zentrale ist dein Home Assistant mit der Integration
 [Briefankündigung](https://github.com/Teyro/Briefankuendigung-HA) (ab 1.5). Sie liest die Versandmails der
 Dienste, fragt auf Wunsch DHL und 17TRACK nach dem aktuellen Stand und hält alle Geräte auf demselben Stand.
 
 *English: see [README.md](README.md)*
 
-## Was Paketbote kann
+## Was Post & Pakete kann
 
 - **Alle Sendungen auf einen Blick:** Heute · Unterwegs · Zugestellt – sortiert nach voraussichtlicher Zustellung
   („kommt morgen, 10:00–13:00“, „voraussichtlich Fr 30.10.“, „zur Abholung bereit“, „überfällig seit …“)
@@ -18,12 +18,19 @@ Dienste, fragt auf Wunsch DHL und 17TRACK nach dem aktuellen Stand und hält all
 - **Mehrere Amazon-Konten:** an jedem Paket steht, für wen es ist (Kundenkonten in der Integration)
 - **Mitteilungen** bei „kommt heute“, „zur Abholung bereit“, „zugestellt“ und Problemen
 - **Widgets:** iPhone (Home- und Sperrbildschirm), Mac (Schreibtisch), Plasma (Panel und Kachel)
-- **Siri & Kurzbefehle:** „Welche Pakete kommen heute mit Paketbote?“, „Sendung mit Paketbote verfolgen“
+- **Siri & Kurzbefehle:** „Welche Pakete kommen heute mit Post & Pakete?“, „Sendung mit Post & Pakete verfolgen“
 - Deutsch und Englisch, hell und dunkel, Updates (Mac und Linux mit einem Klick)
 
-## Neu in 1.2: Direkt verfolgen – auch ohne Home Assistant
+## Neu in 2.0: Post & Pakete – eine App für Briefe und Pakete
 
-Sendungsnummer eintippen, einfügen oder den Paketschein **scannen** – Paketbote holt Stand, Verlauf und Karte selbst.
+Aus *Post & Pakete*, *Briefankündigung Desktop* und dem Scriptable-Widget wird eine App: **Briefe** (Umschlagbild,
+„Wichtig“, Angekommen, Erinnern, Notiz) und **Pakete** in einer gemeinsamen Liste – Heute · Unterwegs · Angekommen –
+mit der Auswahl „Alles | Briefe | Pakete“. Widgets, Siri („Was kommt heute?“), Menüleiste, Plasma-Widget und KRunner
+zeigen beides. Neues Symbol. Liquid Glass auf iPhone, iPad und Mac (ab iOS/macOS 26), KDE-Design (Kirigami/Breeze) unter Linux.
+
+## Direkt verfolgen – auch ohne Home Assistant
+
+Sendungsnummer eintippen, einfügen oder den Paketschein **scannen** – Post & Pakete holt Stand, Verlauf und Karte selbst.
 Mehrere Anbieter werden der Reihe nach gefragt; antwortet einer nicht, springt der nächste ein. In den Einstellungen
 lässt sich jeder einzeln an- und abschalten:
 
@@ -37,7 +44,7 @@ lässt sich jeder einzeln an- und abschalten:
 | GLS, DPD öffentlich | GLS, DPD | keiner (inoffiziell, kann ausfallen) |
 
 Sendungen aus Home Assistant ohne Verlauf verfolgt die App automatisch mit. Dazu: **Live-Aktivität** und Dynamic Island,
-**Teilen-Menü** („Teilen → Paketbote“ aus Mail oder Safari), **Statistik**, **Notiz und Foto** je Sendung,
+**Teilen-Menü** („Teilen → Post & Pakete“ aus Mail oder Safari), **Statistik**, **Notiz und Foto** je Sendung,
 **Rücksendungen**, **Apple Watch** (eigene IPA), auf dem Mac **Ziehen & Ablegen**, **⌥⌘P** von überall und **Drucken**,
 unter Linux **KRunner** („pb 0034…“), **Karte**, **Mitteilungen** und **Flatpak**.
 
@@ -61,24 +68,24 @@ unter Linux **KRunner** („pb 0034…“), **Karte**, **Mitteilungen** und **Fl
    - **Mitteilungen an** die Home-Assistant-App deines iPhones – die zuverlässigsten Push-Mitteilungen.
 3. Ein **langlebiges Zugriffstoken** anlegen (unten links auf deinen Namen → Sicherheit).
 
-Amazon, Hermes und DPD haben keine offene Schnittstelle für Privatkunden. Paketbote meldet sich dort
+Amazon, Hermes und DPD haben keine offene Schnittstelle für Privatkunden. Post & Pakete meldet sich dort
 bewusst **nicht** mit deinem Konto an – die Versandmails und 17TRACK genügen.
 
 ## Installieren
 
-**iPhone/iPad:** `Paketbote-iOS-x.y.z.ipa` aus den [Releases](https://github.com/Teyro/Paketbote/releases) in Signulous
+**iPhone/iPad:** `PostUndPakete-iOS-x.y.z.ipa` aus den [Releases](https://github.com/Teyro/Post-und-Pakete/releases) in Signulous
 hochladen und installieren. Beim ersten Start Adresse und Token eintragen; Widgets wie gewohnt hinzufügen.
 Neue Versionen zeigt die App oben als Hinweis.
 
-**Mac:** `Paketbote-macOS-x.y.z.zip` laden, `Paketbote.app` in „Programme“ ziehen. Beim ersten Start mit
-Rechtsklick → Öffnen (die App ist nicht notariell beglaubigt). Updates: Menü *Paketbote → Nach Updates suchen*.
+**Mac:** `PostUndPakete-macOS-x.y.z.zip` laden, `Post & Pakete.app` in „Programme“ ziehen. Beim ersten Start mit
+Rechtsklick → Öffnen (die App ist nicht notariell beglaubigt). Updates: Menü *Post & Pakete → Nach Updates suchen*.
 
-**Apple Watch:** statt der normalen IPA `Paketbote-iOS-mit-Uhr-x.y.z.ipa` installieren.
+**Apple Watch:** statt der normalen IPA `PostUndPakete-iOS-mit-Uhr-x.y.z.ipa` installieren.
 
-**Linux (Flatpak):** `Paketbote-x.y.z.flatpak` laden und `flatpak install --user Paketbote-x.y.z.flatpak` (Einstellungen getrennt vom Plasma-Widget).
+**Linux (Flatpak):** `PostUndPakete-x.y.z.flatpak` laden und `flatpak install --user PostUndPakete-x.y.z.flatpak` (Einstellungen getrennt vom Plasma-Widget).
 
-**Linux:** `paketbote-linux-x.y.z.tar.gz` entpacken und `sh paketbote/installieren.sh` ausführen (ohne Root).
-Danach steht *Paketbote* im Startmenü und – unter Plasma 6 – in der Widget-Auswahl. Braucht Qt 6 und Kirigami
+**Linux:** `post-und-pakete-linux-x.y.z.tar.gz` entpacken und `sh post-und-pakete/installieren.sh` ausführen (ohne Root).
+Danach steht *Post & Pakete* im Startmenü und – unter Plasma 6 – in der Widget-Auswahl. Braucht Qt 6 und Kirigami
 (bei KDE Plasma schon dabei). Updates installiert das Plasma-Widget auf Knopfdruck.
 
 ## Entwickeln

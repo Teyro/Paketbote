@@ -3,7 +3,7 @@ import SwiftUI
 import AppIntents
 import PaketKern
 
-/// Widgets von Paketbote für Home-Bildschirm, Sperrbildschirm (iPhone) und Schreibtisch (Mac).
+/// Widgets von Post & Pakete für Home-Bildschirm, Sperrbildschirm (iPhone) und Schreibtisch (Mac).
 @main
 struct PaketboteWidgets: WidgetBundle {
     init() { Sprache.laden() }
@@ -17,10 +17,20 @@ struct PaketboteWidgets: WidgetBundle {
 
 /// Einstellungen des Widgets (lange drücken → „Widget bearbeiten“): eigener Zugang zu Home Assistant.
 /// Nötig, wenn die App ihn nicht teilen kann (keine App-Gruppe nach dem Neu-Signieren, z. B. mit Signulous).
+/// Was das Widget zeigt
+enum WidgetInhaltWahl: String, AppEnum {
+    case alle, briefe, pakete
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Inhalt"
+    static let caseDisplayRepresentations: [WidgetInhaltWahl: DisplayRepresentation] = [
+        .alle: "Briefe und Pakete", .briefe: "Nur Briefe", .pakete: "Nur Pakete",
+    ]
+}
+
 struct WidgetZugang: WidgetConfigurationIntent {
-    static let title: LocalizedStringResource = "Paketbote"
+    static let title: LocalizedStringResource = "Post & Pakete"
     static let description = IntentDescription("Home Assistant für dieses Widget – nur nötig, wenn das Widget sonst nichts zeigt.")
 
+    @Parameter(title: "Zeigen", default: .alle) var inhalt: WidgetInhaltWahl
     @Parameter(title: "Home-Assistant-Adresse") var adresse: String?
     @Parameter(title: "Zugriffstoken") var token: String?
     @Parameter(title: "Postfach (leer = alle)") var konto: String?
@@ -30,7 +40,7 @@ struct WidgetZugang: WidgetConfigurationIntent {
 
 struct Eintrag: TimelineEntry {
     let date: Date
-    let daten: WidgetDaten
+    var daten: WidgetDaten
 }
 
 struct Zeitleiste: AppIntentTimelineProvider {
@@ -46,7 +56,11 @@ struct Zeitleiste: AppIntentTimelineProvider {
         ]), eingerichtet: true))
     }
 
-    func snapshot(for configuration: WidgetZugang, in context: Context) async -> Eintrag { gespeichert() }
+    func snapshot(for configuration: WidgetZugang, in context: Context) async -> Eintrag {
+        var e = gespeichert()
+        e.daten.inhalt = configuration.inhalt.rawValue
+        return e
+    }
 
     func timeline(for configuration: WidgetZugang, in context: Context) async -> Timeline<Eintrag> {
         var e = gespeichert()
@@ -61,6 +75,7 @@ struct Zeitleiste: AppIntentTimelineProvider {
             u.sendungen = zusammenfuehren(ha: u.sendungen, direkt: direkt)
             e = Eintrag(date: Date(), daten: WidgetDaten(uebersicht: u, eingerichtet: true))
         }
+        e.daten.inhalt = configuration.inhalt.rawValue
         // um Mitternacht neu (für „kommt heute“), sonst alle 30 Minuten
         let mitternacht = Calendar.current.startOfDay(for: Date().addingTimeInterval(86400))
         return Timeline(entries: [e], policy: .after(min(Date().addingTimeInterval(1800), mitternacht)))
@@ -72,8 +87,8 @@ struct PaketeWidget: Widget {
         AppIntentConfiguration(kind: "pakete", intent: WidgetZugang.self, provider: Zeitleiste()) { e in
             WidgetInhalt(e: e)
         }
-        .configurationDisplayName(T("Pakete"))
-        .description(T("Deine Sendungen mit voraussichtlicher Zustellung."))
+        .configurationDisplayName(T("Post & Pakete"))
+        .description(T("Angekündigte Briefe und Pakete mit voraussichtlicher Zustellung."))
         #if os(iOS)
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular, .accessoryCircular, .accessoryInline])
         #else

@@ -80,3 +80,33 @@ final class KernTests: XCTestCase {
         XCTAssertEqual(zurueck.sendungen[0].ereignisse, u.sendungen[0].ereignisse)
     }
 }
+
+final class BriefTests: XCTestCase {
+    func testBriefeUndSatz() {
+        var kal = Calendar(identifier: .gregorian)
+        kal.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        let jetzt = kal.date(from: DateComponents(year: 2026, month: 10, day: 21, hour: 9))!
+        let ms = { (d: Date) -> JSON in .zahl(d.timeIntervalSince1970 * 1000) }
+        let j: JSON = ["version": 4, "konten": [], "briefe": [
+            ["id": "b1", "datum": ms(jetzt.addingTimeInterval(-3600)), "art": "brief", "absender": "AOK", "bild": true],
+            ["id": "b2", "datum": ms(jetzt.addingTimeInterval(-1800)), "art": "brief", "absender": "Finanzamt", "wichtig": true],
+            ["id": "b3", "datum": ms(jetzt.addingTimeInterval(-30 * 3600)), "art": "brief", "absender": ""],
+            ["id": "p1", "datum": ms(jetzt), "art": "paket", "absender": "OTTO", "dienst": "hermes", "stand": "heute"],
+        ]]
+        let u = Uebersicht.aus(j)!
+        XCTAssertEqual(u.briefe.map(\.id), ["b2", "b1", "b3"])
+        XCTAssertEqual(u.sendungen.count, 1)
+        let b = BriefGruppen(u.briefe, jetzt: jetzt, kalender: kal)
+        XCTAssertEqual(b.heute.map(\.id), ["b2", "b1"], "wichtige zuerst")
+        XCTAssertEqual(b.unterwegs.map(\.id), ["b3"])
+        XCTAssertEqual(u.briefe[2].titel, "Absender unbekannt")
+        XCTAssertEqual(Texte.brief(u.briefe[1], jetzt: jetzt, kalender: kal), "angekündigt heute")
+        let satz = Texte.postSatz(b, Gruppen(u.sendungen, jetzt: jetzt, kalender: kal))
+        XCTAssertTrue(satz.hasPrefix("Heute kommt ein Paket: OTTO (Hermes)."), satz)
+        XCTAssertTrue(satz.contains("Dazu kommen 2 Briefe: Finanzamt und AOK. Wichtig: Finanzamt."), satz)
+        // ältere gespeicherte Stände ohne Briefe lesen
+        let alt = #"{"sendungen":[],"konten":[],"fehler":"","version":4,"geholt":0}"#
+        let dec = JSONDecoder(); dec.dateDecodingStrategy = .secondsSince1970
+        XCTAssertEqual(try dec.decode(Uebersicht.self, from: Data(alt.utf8)).briefe.count, 0)
+    }
+}
