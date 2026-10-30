@@ -24,7 +24,7 @@ mkdir -p "$ZIEL"
 rm -rf "$ZIEL/app" "$ZIEL/gemeinsam"
 cp -r "$HIER/app" "$HIER/gemeinsam" "$ZIEL/"
 cp "$HIER/paketbote.svg" "$ZIEL/"
-cp "$HIER/installieren.sh" "$ZIEL/"
+cp "$HIER/installieren.sh" "$HIER/aktualisieren.sh" "$ZIEL/"
 
 ANW="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 mkdir -p "$ANW"
@@ -42,6 +42,16 @@ Categories=Utility;Network;
 Keywords=Brief;Post;Paket;DHL;Hermes;DPD;GLS;UPS;Amazon;Sendung;parcel;tracking;
 StartupWMClass=qml
 DESKTOP
+# Auto-Update: die App ruft paketbote-update:<Version> auf, das Skript lädt und installiert die neue Version
+cat > "$ANW/de.teyro.paketbote-update.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=Post & Pakete aktualisieren
+Exec=sh "$ZIEL/aktualisieren.sh" %u
+NoDisplay=true
+MimeType=x-scheme-handler/paketbote-update;
+DESKTOP
+command -v xdg-mime >/dev/null 2>&1 && xdg-mime default de.teyro.paketbote-update.desktop x-scheme-handler/paketbote-update 2>/dev/null || true
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$ANW" 2>/dev/null || true
 # KRunner: Sendungsnummer eintippen → verfolgen; „pakete“ → was unterwegs ist (braucht python3-dbus und python3-gi)
 if command -v python3 >/dev/null 2>&1; then

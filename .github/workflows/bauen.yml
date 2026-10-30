@@ -23,12 +23,14 @@ jobs:
           git diff --exit-code -- linux/gemeinsam/uebersetzung.js || { echo "uebersetzung.js ist nicht aktuell – node werkzeuge/baue-uebersetzungen.mjs"; exit 1; }
           node linux/test/logik-test.mjs
           sh -n linux/installieren.sh
+          sh -n linux/aktualisieren.sh
+          grep -q "VERSION = \"$(cat apple/VERSION)\"" linux/gemeinsam/version.js || { echo "linux/gemeinsam/version.js passt nicht zu apple/VERSION"; exit 1; }
       - name: Paket bauen
         run: |
           VERSION=$(cat apple/VERSION)
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF#refs/tags/v}"; fi
           sed -i "s/\"Version\": \"[0-9.]*\"/\"Version\": \"$VERSION\"/" linux/plasmoid/package/metadata.json
-          sed -i "s/text: \"[0-9.]*\" }/text: \"$VERSION\" }/" linux/app/EinstellungenSeite.qml
+          sed -i "s/VERSION = \"[0-9.]*\"/VERSION = \"$VERSION\"/" linux/gemeinsam/version.js
           mkdir -p dateien
           tar czf "dateien/post-und-pakete-linux-$VERSION.tar.gz" --exclude=test --exclude=flatpak --transform 's,^linux,post-und-pakete,' linux
           tar tzf "dateien/post-und-pakete-linux-$VERSION.tar.gz" | head -30

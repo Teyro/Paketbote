@@ -40,6 +40,8 @@ Kirigami.ApplicationWindow {
         // abgeschaltete Anbieter (JSON-Liste von Namen)
         property string aus: "[]"
         property bool auchInHA: true
+        /// Neue Versionen selbst installieren
+        property bool autoUpdate: true
         /// Liste: "alle" | "briefe" | "pakete"
         property string bereich: "alle"
     }
@@ -63,6 +65,12 @@ Kirigami.ApplicationWindow {
             fenster.showPassiveNotification(titel + ": " + text, "long");
             if (mitteilung.item) mitteilung.item.zeigen(titel, text);
         }
+    }
+
+    Aktualisierung {
+        id: aktualisierer
+        automatisch: speicher.autoUpdate
+        onMeldung: (text) => fenster.showPassiveNotification(text, "long")
     }
 
     // Mitteilung auf dem Schreibtisch (KDE-Benachrichtigungen; fehlt das Modul, bleibt es bei der Meldung im Fenster)
@@ -113,7 +121,7 @@ Kirigami.ApplicationWindow {
 
     Component {
         id: einstellungsSeite
-        EinstellungenSeite { ha: verbindung; einstellungen: speicher }
+        EinstellungenSeite { ha: verbindung; einstellungen: speicher; aktualisierung: aktualisierer }
     }
 
     Kirigami.Dialog {

@@ -13,6 +13,7 @@ Kirigami.ScrollablePage {
     id: seite
     required property var ha
     required property var einstellungen
+    required property var aktualisierung
     title: S.t("Einstellungen")
     readonly property var aus: { try { return JSON.parse(einstellungen.aus); } catch (e) { return []; } }
     function anbieterSetzen(name, an) {
@@ -132,7 +133,18 @@ Kirigami.ScrollablePage {
         }
 
         Kirigami.Separator { Kirigami.FormData.isSection: true; Kirigami.FormData.label: S.t("Über") }
-        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: "2.1.0" }
+        QQC2.Label { Kirigami.FormData.label: S.t("Version"); text: seite.aktualisierung.version }
+        QQC2.CheckBox {
+            text: S.t("Updates automatisch installieren")
+            checked: seite.einstellungen.autoUpdate
+            onToggled: seite.einstellungen.autoUpdate = checked
+        }
+        QQC2.Button {
+            text: seite.aktualisierung.neu ? S.t("Update auf %1 installieren", seite.aktualisierung.neu) : S.t("Nach Updates suchen")
+            icon.name: "update-none"
+            enabled: !seite.aktualisierung.laeuft
+            onClicked: seite.aktualisierung.neu ? seite.aktualisierung.installieren() : seite.aktualisierung.pruefen(true)
+        }
         Kirigami.UrlButton { Kirigami.FormData.label: S.t("Post & Pakete auf GitHub"); url: "https://github.com/Teyro/Post-und-Pakete" }
         Kirigami.UrlButton { Kirigami.FormData.label: S.t("Integration (HACS)"); url: "https://github.com/Teyro/Briefankuendigung-HA" }
     }

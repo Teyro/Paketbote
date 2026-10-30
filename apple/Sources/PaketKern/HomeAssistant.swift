@@ -59,9 +59,11 @@ public struct HomeAssistant: Sendable {
 
     /// Sendung von Hand verfolgen; dienst "" = an der Nummer erkennen
     @discardableResult
-    public func hinzufuegen(nummer: String, dienst: String, name: String) async throws -> String {
-        let d = try await anfrage("/api/briefankuendigung/sendung", methode: "POST",
-                                  koerper: ["nummer": nummer, "dienst": dienst, "name": name, "konto": konto])
+    /// standInfo (ab Integration 1.8): Stand, den dieses Gerät kennt – siehe Abgleich
+    public func hinzufuegen(nummer: String, dienst: String, name: String, standInfo: [String: Any]? = nil) async throws -> String {
+        var k: [String: Any] = ["nummer": nummer, "dienst": dienst, "name": name, "konto": konto]
+        if let standInfo { k["stand_info"] = standInfo }
+        let d = try await anfrage("/api/briefankuendigung/sendung", methode: "POST", koerper: k)
         return JSON.lesen(d)?["id"]?.text ?? ""
     }
 

@@ -118,9 +118,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                     try? await Task.sleep(for: .seconds(600))
                 }
             }
+            // Updates: kurz nach dem Start und dann alle 6 Stunden; automatisch installieren, wenn eingeschaltet
             Task {
                 try? await Task.sleep(for: .seconds(20))
-                await Aktualisierer.shared.pruefen()
+                while true {
+                    let a = Aktualisierer.shared
+                    await a.pruefen()
+                    if a.neueVersion != nil && kern.einstellungen.autoUpdate { await a.installieren() }
+                    try? await Task.sleep(for: .seconds(6 * 3600))
+                }
             }
         }
     }

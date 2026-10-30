@@ -111,6 +111,7 @@ final class Kern {
             }
             direkt = liste
             liste.speichern()
+            await abgleichen()
         }
         if einstellungen.mitteilungen && !vorher.isEmpty { await melden(alt: vorher, neu: alle) }
         if einstellungen.mitteilungen && !ersterAbruf { await briefeMelden(neu: briefGruppen.heute.filter { !vorherBriefe.contains($0.id) }) }
@@ -118,6 +119,23 @@ final class Kern {
         if einstellungen.rueckgabeErinnern && !vorschau { await rueckgabenErinnern() }
         widgetsSchreiben()
         nachLaden(self)
+    }
+
+    /// Eigene Sendungen samt Stand an Home Assistant geben – so tauchen sie auf den anderen Geräten (Linux, Mac, iPhone) auf
+    private func abgleichen() async {
+        guard einstellungen.eingerichtet, einstellungen.auchInHA, let ha = daten?.sendungen else { return }
+        var gesendet = UserDefaults.standard.dictionary(forKey: "abgleichGesendet") as? [String: String] ?? [:]
+        let offen = Abgleich.offen(ha: ha, direkt: direkt.sendungen, gesendet: gesendet)
+        guard !offen.isEmpty else { return }
+        let verbindung = self.ha
+        for d in offen.prefix(20) {
+            gesendet[d.nummer] = d.signatur
+            _ = try? await verbindung.hinzufuegen(nummer: d.nummer, dienst: d.dienst, name: d.name.isEmpty ? d.absender : d.name, standInfo: d.standInfo)
+        }
+        // nur Nummern behalten, die es noch gibt
+        let nummern = Set(direkt.sendungen.map(\.nummer))
+        UserDefaults.standard.set(gesendet.filter { nummern.contains($0.key) }, forKey: "abgleichGesendet")
+        if let neu = try? await verbindung.laden() { daten = neu }
     }
 
     /// Stand für Widgets (App-Gruppe bzw. Ersatzweg) und Neuzeichnen
@@ -381,6 +399,8 @@ final class Einstellungen {
     var bereich: String { didSet { d.set(bereich, forKey: "bereich") } }
     /// Nach der Zustellung automatisch an die Rücksendefrist erinnern
     var rueckgabeErinnern: Bool { didSet { d.set(rueckgabeErinnern, forKey: "rueckgabeErinnern") } }
+    /// Neue Versionen selbst suchen (Mac: auch installieren; iPhone: Bescheid geben)
+    var autoUpdate: Bool { didSet { d.set(autoUpdate, forKey: "autoUpdate") } }
     var token: String {
         didSet {
             guard !vorschau else { return }
@@ -397,7 +417,7 @@ final class Einstellungen {
 
     init(vorschau: Bool) {
         self.vorschau = vorschau
-        d.register(defaults: ["mitteilungen": true, "tageZugestellt": 14, "auchInHA": true, "direktModus": false, "liveAktivitaet": true, "rueckgabeErinnern": true])
+        d.register(defaults: ["mitteilungen": true, "tageZugestellt": 14, "auchInHA": true, "direktModus": false, "liveAktivitaet": true, "rueckgabeErinnern": true, "autoUpdate": true])
         adresse = vorschau ? "" : d.string(forKey: "adresse") ?? ""
         konto = vorschau ? "" : d.string(forKey: "konto") ?? ""
         mitteilungen = d.bool(forKey: "mitteilungen")
@@ -407,6 +427,7 @@ final class Einstellungen {
         liveAktivitaet = d.bool(forKey: "liveAktivitaet")
         bereich = d.string(forKey: "bereich") ?? "alle"
         rueckgabeErinnern = d.bool(forKey: "rueckgabeErinnern")
+        autoUpdate = d.bool(forKey: "autoUpdate")
         // bis 1.0 lag der Token auf dem iPhone in den Einstellungen
         let alt = d.string(forKey: "token") ?? ""
         token = vorschau ? "" : Schluesselbund.lesen(konto: "token") ?? alt

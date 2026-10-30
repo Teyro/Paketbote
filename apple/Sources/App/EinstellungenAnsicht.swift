@@ -55,6 +55,18 @@ struct EinstellungenAnsicht: View {
                 Text(T("Die App meldet sich, wenn sie neu lädt. Zuverlässiger im Hintergrund: in der Integration „Mitteilungen an“ die Home-Assistant-App wählen."))
             }
 
+            Section {
+                Toggle(T("Automatisch nach Updates suchen"), isOn: $e.autoUpdate)
+            } header: {
+                Text(T("Updates"))
+            } footer: {
+                #if os(macOS)
+                Text(T("Neue Versionen werden geladen, geprüft und installiert; die App startet dann kurz neu."))
+                #else
+                Text(T("Eine selbst signierte App kann sich nicht selbst installieren. Bei einer neuen Version kommt eine Mitteilung mit einem Link zur IPA – die dann wie gewohnt signieren."))
+                #endif
+            }
+
             if let k = kern.daten?.konten.first {
                 Section(T("Sendungsverfolgung in Home Assistant")) {
                     LabeledContent(T("DHL live"), value: k.dhlLive ? T("an") : T("aus – DHL-Schlüssel in der Integration"))

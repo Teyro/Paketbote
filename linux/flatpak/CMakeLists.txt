@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(paketbote LANGUAGES CXX)
+set(CMAKE_AUTOMOC ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets Qml Quick QuickControls2)
 set(QML_ZIEL "${CMAKE_INSTALL_PREFIX}/share/paketbote")
 add_executable(paketbote main.cpp)

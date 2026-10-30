@@ -265,6 +265,31 @@ function zusammenfuehren(ha, direkt) {
     return erg;
 }
 
+/** Was dieses Gerät über eine Sendung weiß – für Home Assistant (ab Integration 1.8), damit alle Geräte denselben Stand sehen */
+function standInfo(s) {
+    return { stand: s.stand, text: s.statusText || "", erwartet: s.erwartet || "", zeitfenster: s.zeitfenster || "", problem: !!s.problem,
+             ruecksendung: !!s.ruecksendung, erledigt: !!s.erledigt,
+             ereignisse: (s.ereignisse || []).slice(0, 40).map(function (e) {
+                 return { zeit: e.zeit ? new Date(e.zeit).toISOString() : "", text: e.text, ort: e.ort || "" };
+             }) };
+}
+
+/** Direkt verfolgte Sendungen, die Home Assistant noch nicht (oder mit älterem Stand) kennt.
+ *  gesendet: Nummer → zuletzt geschickter Stand (nicht zweimal dasselbe schicken) */
+function abgleich(ha, direkt, gesendet) {
+    return (direkt || []).filter(function (d) {
+        if (!d.nummer) return false;
+        var sig = d.stand + "|" + (d.ereignisse || []).length + "|" + !!d.erledigt + "|" + !!d.ruecksendung;
+        if (gesendet[d.nummer] === sig) return false;
+        var h = null;
+        for (var i = 0; i < (ha || []).length && !h; i++) if (String(ha[i].nummer).toUpperCase() === d.nummer) h = ha[i];
+        if (h && stufe(h) >= stufe(d) && h.ereignisse.length >= (d.ereignisse || []).length
+            && (h.erledigt || !d.erledigt) && (h.ruecksendung || !d.ruecksendung)) return false;
+        d.signatur = sig;
+        return true;
+    });
+}
+
 // --- Briefe (Deutsche Post Briefankündigung, nur mit Home Assistant) ---
 
 /** Antwort von /api/briefankuendigung/briefe → nur die Briefe */

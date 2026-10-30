@@ -103,6 +103,24 @@ final class KernTests: XCTestCase {
         XCTAssertEqual(alt.id, "p5")
         XCTAssertEqual(alt.abholcode, "")
     }
+
+    func testAbgleich() throws {
+        let ha = beispiel().sendungen
+        var otto = ha[0]            // in Home Assistant unterwegs
+        otto.nummer = otto.nummer.uppercased()
+        otto.stand = "zugestellt"
+        var neu = otto
+        neu.nummer = "00340434161094015902"
+        let offen = Abgleich.offen(ha: ha, direkt: [otto, neu], gesendet: [:])
+        XCTAssertEqual(offen.map(\.nummer), [otto.nummer, neu.nummer])
+        XCTAssertTrue(Abgleich.offen(ha: ha, direkt: [otto], gesendet: [otto.nummer: otto.signatur]).isEmpty, "nicht zweimal")
+        var gleich = ha[0]
+        gleich.nummer = gleich.nummer.uppercased()
+        XCTAssertTrue(Abgleich.offen(ha: ha, direkt: [gleich], gesendet: [:]).isEmpty, "Home Assistant weiß schon alles")
+        let info = otto.standInfo
+        XCTAssertEqual(info["stand"] as? String, "zugestellt")
+        XCTAssertTrue(JSONSerialization.isValidJSONObject(info))
+    }
 }
 
 final class BriefTests: XCTestCase {

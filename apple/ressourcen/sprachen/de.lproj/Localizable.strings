@@ -54,6 +54,7 @@
 "aus – DHL-Schlüssel in der Integration" = "aus – DHL-Schlüssel in der Integration";
 "aus – Schlüssel in der Integration" = "aus – Schlüssel in der Integration";
 "Automatisch (%1)" = "Automatisch (%1)";
+"Automatisch nach Updates suchen" = "Automatisch nach Updates suchen";
 "Barcode oder Sendungsnummer auf dem Paketschein ins Bild halten." = "Barcode oder Sendungsnummer auf dem Paketschein ins Bild halten.";
 "Beenden" = "Beenden";
 "Beim Dienst" = "Beim Dienst";
@@ -92,6 +93,7 @@
 "Download fehlgeschlagen" = "Download fehlgeschlagen";
 "Drucken …" = "Drucken …";
 "Durchschnittliche Laufzeit" = "Durchschnittliche Laufzeit";
+"Eine selbst signierte App kann sich nicht selbst installieren. Bei einer neuen Version kommt eine Mitteilung mit einem Link zur IPA – die dann wie gewohnt signieren." = "Eine selbst signierte App kann sich nicht selbst installieren. Bei einer neuen Version kommt eine Mitteilung mit einem Link zur IPA – die dann wie gewohnt signieren.";
 "Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen die angekündigten Briefe und die Pakete aus deinen Versandmails dazu." = "Einfach eine Sendungsnummer eintragen – oder mit Home Assistant verbinden: dann kommen die angekündigten Briefe und die Pakete aus deinen Versandmails dazu.";
 "Einfügen" = "Einfügen";
 "Einstellungen" = "Einstellungen";
@@ -151,6 +153,7 @@
 "Kopieren" = "Kopieren";
 "Kundenkonto" = "Kundenkonto";
 "Lade das Archiv …" = "Lade das Archiv …";
+"Laden" = "Laden";
 "Langlebiges Zugriffstoken" = "Langlebiges Zugriffstoken";
 "Leer lassen, um wieder den Absender zu zeigen." = "Leer lassen, um wieder den Absender zu zeigen.";
 "Letzte Meldung" = "Letzte Meldung";
@@ -172,6 +175,7 @@
 "Name" = "Name";
 "Name, z. B. „Neue Schuhe“ (optional)" = "Name, z. B. „Neue Schuhe“ (optional)";
 "Neu laden" = "Neu laden";
+"Neue Versionen werden geladen, geprüft und installiert; die App startet dann kurz neu." = "Neue Versionen werden geladen, geprüft und installiert; die App startet dann kurz neu.";
 "nicht erreichbar" = "nicht erreichbar";
 "Nichts gewählt" = "Nichts gewählt";
 "Noch keine Stationen bekannt." = "Noch keine Stationen bekannt.";
@@ -199,6 +203,7 @@
 "Pakete (%1)" = "Pakete (%1)";
 "Paketschein scannen" = "Paketschein scannen";
 "Post & Pakete" = "Post & Pakete";
+"Post & Pakete %1 ist da" = "Post & Pakete %1 ist da";
 "Post & Pakete auf dem iPhone öffnen." = "Post & Pakete auf dem iPhone öffnen.";
 "Post & Pakete auf GitHub" = "Post & Pakete auf GitHub";
 "Post & Pakete einrichten" = "Post & Pakete einrichten";
@@ -237,6 +242,7 @@
 "Stand" = "Stand";
 "Statistik" = "Statistik";
 "Teilen" = "Teilen";
+"Tippen, um die neue Version zu laden und zu signieren." = "Tippen, um die neue Version zu laden und zu signieren.";
 "Token" = "Token";
 "Über" = "Über";
 "überfällig seit %1" = "überfällig seit %1";
@@ -246,9 +252,14 @@
 "Unerwartete Antwort von Home Assistant." = "Unerwartete Antwort von Home Assistant.";
 "unterwegs" = "unterwegs";
 "Unterwegs" = "Unterwegs";
+"Update auf %1 bitte von GitHub laden." = "Update auf %1 bitte von GitHub laden.";
+"Update auf %1 installieren" = "Update auf %1 installieren";
 "Update auf %1 installieren …" = "Update auf %1 installieren …";
+"Update auf %1 wird installiert …" = "Update auf %1 wird installiert …";
 "Update fehlgeschlagen" = "Update fehlgeschlagen";
 "Update installiert – Plasma lädt das Widget beim nächsten Start neu." = "Update installiert – Plasma lädt das Widget beim nächsten Start neu.";
+"Updates" = "Updates";
+"Updates automatisch installieren" = "Updates automatisch installieren";
 "UPS Client-ID" = "UPS Client-ID";
 "UPS Client-Secret" = "UPS Client-Secret";
 "UPS-Zugang (kostenlos)" = "UPS-Zugang (kostenlos)";

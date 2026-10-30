@@ -93,4 +93,21 @@ assert.ok(L.rueckgabeOffen(ab[1], jetzt));
 assert.equal(L.kurzTag(L.rueckgabeBis(ab[2]), jetzt), 'morgen');
 assert.equal(L.rueckgabeBis(ab[3]), 0, 'unbekannter Shop');
 assert.equal(L.mitteilung(Object.assign({}, ab[0], { stand: 'unterwegs' }), ab[0]).text, 'Kaffee (DHL) – Abholcode 482913 · Packstation 123');
+// Abgleich mit Home Assistant
+const ha1 = L.sendungenAus({ briefe: [{ id: 'h1', datum: jetzt, art: 'paket', sendung: 'AAA111222', dienst: 'dhl', stand: 'unterwegs' }] });
+const dir = [
+  { nummer: 'AAA111222', dienst: 'dhl', stand: 'zugestellt', ereignisse: [{ zeit: jetzt, text: 'Zugestellt', ort: 'Hamburg' }], erledigt: false },
+  { nummer: 'BBB333444', dienst: 'dhl', stand: 'unterwegs', ereignisse: [], erledigt: false },
+  { nummer: 'AAA111222X', dienst: 'dhl', stand: 'unterwegs', ereignisse: [], erledigt: false },
+];
+const gesendet = {};
+const ab1 = L.abgleich(ha1, dir.slice(0, 2), gesendet);
+assert.deepEqual(ab1.map((d) => d.nummer), ['AAA111222', 'BBB333444'], 'neuerer Stand und unbekannte Sendung');
+ab1.forEach((d) => { gesendet[d.nummer] = d.signatur; });
+assert.equal(L.abgleich(ha1, dir.slice(0, 2), gesendet).length, 0, 'nicht zweimal dasselbe');
+const ha2 = L.sendungenAus({ briefe: [{ id: 'h1', datum: jetzt, art: 'paket', sendung: 'AAA111222X', dienst: 'dhl', stand: 'zugestellt' }] });
+assert.equal(L.abgleich(ha2, [dir[2]], {}).length, 0, 'Home Assistant weiß schon mehr');
+const si = L.standInfo(dir[0]);
+assert.equal(si.stand, 'zugestellt');
+assert.ok(si.ereignisse[0].zeit.startsWith('2026-10-21'));
 console.log('logik.js: alle Prüfungen bestanden');

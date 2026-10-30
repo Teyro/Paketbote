@@ -20,7 +20,9 @@ struct PaketboteApp: App {
             .safeAreaInset(edge: .top) { UpdateBand() }
         }
         .onChange(of: phase) { _, neu in
-            if neu == .active { Task { await kern.laden(still: true); await LiveAktivitaeten.abgleichen(kern, darfStarten: true) } }
+            if neu == .active {
+                Task { await kern.laden(still: true); await LiveAktivitaeten.abgleichen(kern, darfStarten: true); await UpdateHinweis.shared.pruefen() }
+            }
             if neu == .background { Hintergrund.planen() }
         }
         .backgroundTask(.appRefresh(Hintergrund.kennung)) {
@@ -56,6 +58,7 @@ enum Hintergrund {
     static func ausfuehren() async {
         planen()
         await Kern.shared.laden(still: true)
+        await UpdateHinweis.shared.pruefen()
     }
 }
 
@@ -74,6 +77,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     /// Mitteilung antippen: die Sendung zeigen
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        if let s = response.notification.request.content.userInfo["update"] as? String, let url = URL(string: s) {
+            await MainActor.run { UIApplication.shared.open(url) }
+            return
+        }
         if let id = response.notification.request.content.userInfo["sendung"] as? String {
             await MainActor.run { Kern.shared.auswahl = id }
         }
@@ -84,23 +91,47 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 }
 
-/// Neue Version auf GitHub? (Installation über Signulous bzw. die eigene Signatur)
+/// Neue Version auf GitHub? Selbst installieren kann sich eine selbst signierte App nicht – deshalb Band in der App,
+/// eine Mitteilung (auch aus dem Hintergrund) und ein direkter Link zur IPA zum Signieren (z. B. mit Signulous).
 @MainActor
 @Observable
 final class UpdateHinweis {
     static let shared = UpdateHinweis()
     private(set) var neu: String?
+    private(set) var ipa: URL?
     let seite = URL(string: "https://github.com/Teyro/Post-und-Pakete/releases/latest")!
     var ausgeblendet = false
+    @ObservationIgnored private var zuletzt = Date.distantPast
 
     func pruefen() async {
-        guard !Kern.shared.vorschau, let url = URL(string: "https://api.github.com/repos/Teyro/Post-und-Pakete/releases/latest") else { return }
+        guard !Kern.shared.vorschau, Kern.shared.einstellungen.autoUpdate, Date().timeIntervalSince(zuletzt) > 3600,
+              let url = URL(string: "https://api.github.com/repos/Teyro/Post-und-Pakete/releases/latest") else { return }
+        zuletzt = Date()
         var r = URLRequest(url: url)
         r.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         guard let (d, _) = try? await URLSession.shared.data(for: r), let j = JSON.lesen(d), let tag = j["tag_name"]?.text else { return }
         let v = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
         let aktuell = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
-        if v.compare(aktuell, options: .numeric) == .orderedDescending { neu = v }
+        guard v.compare(aktuell, options: .numeric) == .orderedDescending else { neu = nil; return }
+        neu = v
+        ipa = (j["assets"]?.liste ?? []).compactMap { a -> URL? in
+            guard let n = a["name"]?.text, n.hasPrefix("PostUndPakete-iOS-"), !n.contains("mit-Uhr"), n.hasSuffix(".ipa"),
+                  let s = a["browser_download_url"]?.text, s.hasPrefix("https://github.com/Teyro/Post-und-Pakete/releases/download/") else { return nil }
+            return URL(string: s)
+        }.first
+        await melden(v)
+    }
+
+    /// Einmal je Version Bescheid geben
+    private func melden(_ v: String) async {
+        let d = UserDefaults.standard
+        guard d.string(forKey: "updateGemeldet") != v else { return }
+        d.set(v, forKey: "updateGemeldet")
+        let c = UNMutableNotificationContent()
+        c.title = T("Post & Pakete %1 ist da", v)
+        c.body = T("Tippen, um die neue Version zu laden und zu signieren.")
+        c.userInfo = ["update": (ipa ?? seite).absoluteString]
+        try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "update-" + v, content: c, trigger: nil))
     }
 }
 
@@ -111,7 +142,7 @@ struct UpdateBand: View {
             HStack {
                 Label(T("Version %1 ist da", v), systemImage: "arrow.down.circle.fill").font(.callout.weight(.medium))
                 Spacer()
-                Link(T("Ansehen"), destination: u.seite).font(.callout.weight(.semibold))
+                Link(u.ipa == nil ? T("Ansehen") : T("Laden"), destination: u.ipa ?? u.seite).font(.callout.weight(.semibold))
                 Button { u.ausgeblendet = true } label: { Image(systemName: "xmark") }.buttonStyle(.plain).foregroundStyle(.secondary)
             }
             .padding(.horizontal, 14).padding(.vertical, 8)

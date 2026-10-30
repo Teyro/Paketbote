@@ -37,6 +37,12 @@ PlasmoidItem {
         // abgeschaltete Anbieter (JSON-Liste von Namen)
         property string aus: "[]"
         property bool auchInHA: true
+        property bool autoUpdate: true
+    }
+
+    // Auto-Update (gemeinsam mit der App; aktualisieren.sh sorgt dafür, dass es nur einmal läuft)
+    Aktualisierung {
+        automatisch: gemeinsam.autoUpdate
     }
 
     property double jetzt: Date.now()

@@ -119,7 +119,19 @@ const server = http.createServer((req, res) => {
       const nr = String(d.nummer || '').toUpperCase().replace(/\s/g, '');
       const dienst = d.dienst || (/^TBA/.test(nr) ? 'amazon' : /^(00\d{18}|JJD)/.test(nr) ? 'dhl' : /^1Z/.test(nr) ? 'ups' : /^H/.test(nr) ? 'hermes' : '');
       if (!nr || !NAMEN[dienst]) return json({ message: 'Paketdienst nicht erkannt' }, 400);
-      const b = paket({ id: nr.toLowerCase().replace(/[^0-9a-f]/g, '').padEnd(20, 'a').slice(0, 20), datum: Date.now(), absender: d.name || '', sendung: nr, dienst, manuell: true });
+      // wie Integration 1.8: Stand des Geräts übernehmen (nie zurück)
+      const si = d.stand_info || {};
+      const stufe = { unterwegs: 1, heute: 3, abholbereit: 3, zugestellt: 4 };
+      console.log('sendung', nr, si.stand || '-', (si.ereignisse || []).length);
+      const da = POST.briefe.find((x) => x.sendung === nr);
+      if (da) {
+        if (si.stand && (stufe[si.stand] || 0) >= (stufe[da.stand] || 1)) Object.assign(da, { stand: si.stand, ereignisse: si.ereignisse || da.ereignisse });
+        if (si.erledigt) POST.erledigt.add(da.id);
+        return json(da);
+      }
+      const b = paket({ id: nr.toLowerCase().replace(/[^0-9a-f]/g, '').padEnd(20, 'a').slice(0, 20), datum: Date.now(), absender: d.name || '', sendung: nr, dienst, manuell: true,
+        ...(si.stand ? { stand: si.stand, ereignisse: si.ereignisse || [] } : {}) });
+      if (si.erledigt) POST.erledigt.add(b.id);
       POST.briefe.unshift(b);
       return json(b);
     }

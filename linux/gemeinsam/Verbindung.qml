@@ -34,6 +34,8 @@ QtObject {
     /// Fehler der Anbieter bei der letzten direkten Abfrage
     property var anbieterFehler: ({})
     property var bekannt: ({})
+    /// Nummer → an Home Assistant geschickter Stand (Abgleich zwischen den Geräten)
+    property var gesendet: ({})
     property var konten: []
     property int version: 0
     property string fehler: ""
@@ -81,6 +83,22 @@ QtObject {
     function direktSetzen(liste) {
         direkt = liste;
         direktGeaendert(liste);
+        abgleichen();
+    }
+
+    /// Eigene Sendungen samt Stand an Home Assistant geben – so tauchen sie auf iPhone, Mac und anderen Rechnern auf
+    function abgleichen() {
+        if (!eingerichtet || !auchInHA || !geladen || abgelehnt) return;
+        var offen = Logik.abgleich(haSendungen, direkt, gesendet);
+        if (!offen.length) return;
+        var g = Object.assign({}, gesendet), rest = offen.length;
+        offen.forEach(function (d) {
+            g[d.nummer] = d.signatur;
+            anfrage("POST", "/api/briefankuendigung/sendung",
+                    { nummer: d.nummer, dienst: d.dienst, name: d.name || d.absender || "", konto: konto, stand_info: Logik.standInfo(d) },
+                    function () { if (--rest === 0) laden(); });
+        });
+        gesendet = g;
     }
 
     /// Direkt verfolgte Sendungen bei den Anbietern abfragen (offene, und zugestellte bis eine Stunde danach)
@@ -169,6 +187,7 @@ QtObject {
             fehler = "";
             geladen = true;
             pruefeMitteilungen();
+            abgleichen();
             direktAktualisieren();
         });
     }
